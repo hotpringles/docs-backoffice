@@ -141,6 +141,72 @@ describe("sendToAll / notifyDocsChanged", () => {
     expect(sender).toHaveBeenCalledTimes(1);
   });
 
+  it("같은 커밋의 webhook이 동시에 두 번 와도 한 번만 보낸다", async () => {
+    await saveSubscription(db, sub(1));
+    const sender = vi.fn<Sender>(async () => undefined);
+    const input = { commitSha: "race", changedDocs: ["d/a.md"] };
+
+    const results = await Promise.all([notifyDocsChanged({ db, sender }, input), notifyDocsChanged({ db, sender }, input)]);
+
+    expect(results.map((r) => r.status).sort()).toEqual(["sent", "skipped-duplicate"]);
+    expect(sender).toHaveBeenCalledTimes(1);
+  });
+
+  // 커밋 기록을 먼저 남기는 방식이라, 아무에게도 보내지 못한 채 기록만 남으면 GitHub에서 다시 보내기를 눌러도
+  // "이미 보냈다"로 막힌다. 아무에게도 가지 못한 경우에는 기록을 풀어서 다시 시도할 수 있어야 한다.
+  it("구독 목록을 읽다 저장소 오류가 나면 커밋 기록을 풀고 오류를 그대로 던진다", async () => {
+    await saveSubscription(db, sub(1));
+    let failing = true;
+    const flaky: Db = {
+      query: async (text, params) => {
+        if (failing && text.includes("push_subscriptions")) throw new Error("neon blip");
+        return db.query(text, params);
+      },
+    };
+    const sender = vi.fn<Sender>(async () => undefined);
+    const input = { commitSha: "blip", changedDocs: ["d/a.md"] };
+
+    await expect(notifyDocsChanged({ db: flaky, sender }, input)).rejects.toThrow("neon blip");
+    expect(await db.query("select sha from notified_commits")).toEqual([]);
+
+    failing = false;
+    expect((await notifyDocsChanged({ db: flaky, sender }, input)).status).toBe("sent");
+    expect(sender).toHaveBeenCalledTimes(1);
+  });
+
+  it("구독자가 있는데 모두 실패하면(예: VAPID 설정 오류) 커밋 기록을 풀어서 다시 보낼 수 있다", async () => {
+    await saveSubscription(db, sub(1));
+    await saveSubscription(db, sub(2));
+    const broken: Sender = async () => {
+      throw new Error("bad vapid key");
+    };
+    const input = { commitSha: "allfail", changedDocs: ["d/a.md"] };
+
+    const first = await notifyDocsChanged({ db, sender: broken }, input);
+    expect(first).toEqual({ status: "sent", summary: { total: 2, sent: 0, removed: 0, failed: 2 } });
+    expect(await db.query("select sha from notified_commits")).toEqual([]);
+
+    const fixed = vi.fn<Sender>(async () => undefined);
+    expect((await notifyDocsChanged({ db, sender: fixed }, input)).status).toBe("sent");
+    expect(fixed).toHaveBeenCalledTimes(2);
+  });
+
+  it("한 명이라도 받았거나, 실패 없이 만료된 구독만 지웠다면 커밋 기록을 남긴다", async () => {
+    await saveSubscription(db, sub(1));
+    await saveSubscription(db, sub(2));
+    const partial: Sender = async (s) => {
+      if (s.endpoint.endsWith("device-1")) throw new Error("boom");
+    };
+    await notifyDocsChanged({ db, sender: partial }, { commitSha: "partial", changedDocs: ["d/a.md"] });
+    expect(await db.query("select sha from notified_commits where sha = 'partial'")).toHaveLength(1);
+
+    const gone: Sender = async () => {
+      throw Object.assign(new Error("gone"), { statusCode: 410 });
+    };
+    await notifyDocsChanged({ db, sender: gone }, { commitSha: "gone", changedDocs: ["d/a.md"] });
+    expect(await db.query("select sha from notified_commits where sha = 'gone'")).toHaveLength(1);
+  });
+
   it("다른 커밋은 각각 보낸다", async () => {
     await saveSubscription(db, sub(1));
     const sender = vi.fn<Sender>(async () => undefined);
