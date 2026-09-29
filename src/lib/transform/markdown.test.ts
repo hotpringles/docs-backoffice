@@ -38,7 +38,9 @@ describe("기본 Markdown", () => {
     const big = Array.from({ length: 20_000 }, (_, i) => `## 제목 ${i}\n\n문단 ${i} [[Note A]] \`code\`\n`).join("\n");
     const { headings } = await renderMarkdown(big, ctx());
     expect(headings).toHaveLength(20_000);
-  });
+    // 속도가 아니라 "오류 없이 끝나는지"를 보는 테스트다. 혼자 돌면 약 4초지만 다른 테스트와 동시에
+    // 돌면 7초 넘게 걸려서 기본 제한(5초)에 걸리므로 시간 제한을 넉넉히 둔다.
+  }, 30_000);
 });
 
 describe("보안", () => {
