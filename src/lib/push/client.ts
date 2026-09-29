@@ -48,9 +48,11 @@ export async function currentSubscription(deps: PushClientDeps): Promise<Subscri
 /**
  * 알림 구독. 사용자가 버튼을 누른 직후에 불러야 한다(권한 요청은 사용자 동작에 대한 응답이어야 하고,
  * 그래서 다른 비동기 작업보다 먼저 권한부터 묻는다).
- * 서버에 저장하지 못하면 브라우저 쪽 구독도 되돌려서, 알림을 받는다고 착각하지 않게 한다.
+ * 서버에 저장하지 못하면(서버가 거절했든 네트워크가 끊겼든) 브라우저 쪽 구독도 되돌려서,
+ * 서버에는 없는데 화면에는 "알림을 받고 있어요"로 보이는 일이 없게 한다.
  */
 export async function subscribe(deps: PushClientDeps): Promise<SubscribeResult> {
+  let created: SubscriptionLike | undefined;
   try {
     const permission = await deps.requestPermission();
     if (permission !== "granted") {
@@ -62,6 +64,7 @@ export async function subscribe(deps: PushClientDeps): Promise<SubscribeResult> 
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(deps.publicKey),
     });
+    created = subscription;
 
     const response = await deps.fetchImpl(API, {
       method: "POST",
@@ -75,6 +78,8 @@ export async function subscribe(deps: PushClientDeps): Promise<SubscribeResult> 
     }
     return { ok: true };
   } catch (error) {
+    // 구독은 만들어졌는데 그 뒤 단계(서버 저장)가 던진 경우에도 되돌린다. 되돌리기가 실패해도 원래 오류를 알려준다.
+    await created?.unsubscribe().catch(() => undefined);
     return {
       ok: false,
       reason: "error",

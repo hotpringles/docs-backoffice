@@ -113,13 +113,28 @@ describe("subscribe", () => {
   });
 
   it("네트워크 오류나 구독 실패는 던지지 않고 error로 돌려준다", async () => {
-    const network = setup({ fetchImpl: (async () => { throw new Error("offline"); }) as typeof fetch });
-    expect(await subscribe(network.deps)).toEqual({ ok: false, reason: "error", message: "offline" });
-    expect(network.subscription.unsubscribe).not.toHaveBeenCalled(); // 구독은 살아 있지만 서버에 없다. 다시 누르면 저장된다.
-
     const broken = setup();
     broken.pushManager.subscribe.mockRejectedValue(new Error("push service error"));
     expect(await subscribe(broken.deps)).toEqual({ ok: false, reason: "error", message: "push service error" });
+  });
+
+  it("서버에 저장하려다 네트워크가 끊겨도 브라우저 구독을 되돌린다(서버에 없는데 알림을 받는 걸로 보이면 안 된다)", async () => {
+    const network = setup({ fetchImpl: (async () => { throw new Error("offline"); }) as typeof fetch });
+    expect(await subscribe(network.deps)).toEqual({ ok: false, reason: "error", message: "offline" });
+    expect(network.subscription.unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it("되돌리다 실패해도 원래 오류를 알려준다", async () => {
+    const network = setup({ fetchImpl: (async () => { throw new Error("offline"); }) as typeof fetch });
+    network.subscription.unsubscribe.mockRejectedValue(new Error("cannot roll back"));
+    expect(await subscribe(network.deps)).toEqual({ ok: false, reason: "error", message: "offline" });
+  });
+
+  it("구독 만들기 자체가 실패하면 되돌릴 것이 없다", async () => {
+    const broken = setup();
+    broken.pushManager.subscribe.mockRejectedValue(new Error("push service error"));
+    await subscribe(broken.deps);
+    expect(broken.subscription.unsubscribe).not.toHaveBeenCalled();
   });
 });
 
