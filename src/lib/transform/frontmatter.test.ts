@@ -49,6 +49,29 @@ describe("splitFrontmatter", () => {
     expect(body).toBe("");
   });
 
+  it("---js 같은 코드 실행형 frontmatter는 실행하지 않고 오류로 다룬다", () => {
+    const g = globalThis as { __FRONTMATTER_POC?: string };
+    delete g.__FRONTMATTER_POC;
+    const raw = "---js\n({ title: (globalThis.__FRONTMATTER_POC = 'RAN', 'x') })\n---\n본문";
+
+    const { frontmatter, body, error } = splitFrontmatter(raw);
+
+    expect(g.__FRONTMATTER_POC).toBeUndefined();
+    expect(error).toBeTruthy();
+    expect(frontmatter.title).toBeUndefined();
+    expect(body).toBe(raw);
+    delete g.__FRONTMATTER_POC;
+  });
+
+  it("---javascript도 실행하지 않는다", () => {
+    const g = globalThis as { __FRONTMATTER_POC?: string };
+    delete g.__FRONTMATTER_POC;
+    const { error } = splitFrontmatter("---javascript\n({ a: (globalThis.__FRONTMATTER_POC = 'RAN', 1) })\n---\n본문");
+    expect(g.__FRONTMATTER_POC).toBeUndefined();
+    expect(error).toBeTruthy();
+    delete g.__FRONTMATTER_POC;
+  });
+
   it("같은 입력을 두 번 처리해도 결과를 공유하지 않는다", () => {
     const raw = "---\ntitle: A\n---\nx";
     const first = splitFrontmatter(raw);
