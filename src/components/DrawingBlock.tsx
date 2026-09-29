@@ -4,6 +4,7 @@ import { ExcalidrawView } from "./ExcalidrawView";
 
 const REASONS: Record<string, string> = {
   "not-found": "그림 파일을 찾지 못했어요",
+  "fetch-failed": "GitHub에서 그림을 불러오지 못했어요",
   "no-drawing-block": "그림 데이터가 없어요",
   "too-large": "그림 데이터가 너무 커요",
   "decompress-failed": "그림 데이터를 풀지 못했어요",

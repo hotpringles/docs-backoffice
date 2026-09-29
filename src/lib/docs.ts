@@ -9,7 +9,7 @@ import { buildLinkIndex } from "@/lib/transform/link-index";
 import { displayName } from "@/lib/transform/paths";
 import { blobUrl } from "@/lib/transform/repo-urls";
 
-export type DrawingResult = ExtractResult | { ok: false; reason: "not-found" };
+export type DrawingResult = ExtractResult | { ok: false; reason: "not-found" | "fetch-failed" };
 
 export type DocPage =
   | {
@@ -38,7 +38,13 @@ export async function loadDrawing(
 ): Promise<DrawingResult> {
   const entry = findDocEntry(entries, docsPaths, path);
   if (!entry || !isDrawingPath(path)) return { ok: false, reason: "not-found" };
-  return extractExcalidraw(await getBlobText(entry.sha));
+  // 문서 안에 끼워 넣은 그림 하나를 못 받았다고 문서 전체를 오류 화면으로 바꾸지 않는다.
+  // 그 그림 자리에만 실패를 보여주고 나머지 글은 그대로 보여준다.
+  try {
+    return extractExcalidraw(await getBlobText(entry.sha));
+  } catch {
+    return { ok: false, reason: "fetch-failed" };
+  }
 }
 
 /**
