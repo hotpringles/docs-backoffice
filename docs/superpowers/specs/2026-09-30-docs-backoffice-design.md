@@ -3,7 +3,7 @@
 - 작성일: 2026-09-30
 - 상태: 사용자 검토 대기 (일정 알림과 편집 코드 반영본)
 - 앱 저장소: `hotpringles/docs-backoffice` (이 저장소)
-- 문서 저장소: 별도의 공개 GitHub 저장소 1개 (주소와 문서 폴더는 설정값으로 주입, 6.5 참고)
+- 문서 저장소: `kakaotechcampus-4/ktc4-kyungpook-3` (공개, 기본 브랜치 `develop`, 코드와 문서가 섞인 프로젝트 저장소). 저장소 주소와 표시할 폴더는 설정값으로 주입한다. (6.5 참고)
 
 ## 1. 목적과 성공 기준
 
@@ -75,7 +75,7 @@ Vercel Cron (매일 UTC 00:00 = 한국시간 09:00~09:59경)
 ## 5. 컴포넌트
 
 ### 5.1 GitHub 클라이언트 (`lib/github`)
-- `getTree()`: `develop`의 파일 트리(경로, blob SHA). 캐시 태그 `tree`, 만료 시간은 안전장치로 10분(제안값).
+- `getTree()`: `develop`의 파일 트리(경로, blob SHA). 캐시 태그 `tree`, 만료 시간은 안전장치로 10분(제안값). 트리에서는 `DOCS_PATHS`에 지정한 폴더(여러 개 가능) 아래의 `.md`만 남긴다. 저장소에 코드와 이슈 템플릿 등이 섞여 있기 때문이다.
 - `getBlob(sha)`: 파일 내용. **SHA를 키로 캐싱**한다. 내용이 같으면 SHA도 같으므로 바뀐 파일만 다시 받는다.
 - 인증은 읽기 전용 토큰 하나(`GITHUB_TOKEN`). 한도(인증 시 시간당 5,000회) 초과(403/429)는 전용 오류로 던지고, 화면은 캐시에 남은 내용으로 대체한다.
 
@@ -85,12 +85,13 @@ GitHub와 Next.js를 모르는 순수 함수 모음이다. 단독으로 테스�
 - 위키링크: `[[이름]]`, `[[이름|별칭]]`, `[[이름#제목]]`. 대상은 트리에서 파일명으로 찾고, 동명이인은 경로순 첫 번째. 대상이 없으면 "없는 문서"로 표시한다.
 - 임베드: `![[그림.excalidraw]]`는 그림 임베드로, 이미지 임베드와 일반 이미지는 `raw.githubusercontent.com` 주소(커밋 SHA 고정)로 바꿔 브라우저가 직접 받게 한다.
 - `extractExcalidraw(raw)`: `## Drawing` 블록의 `compressed-json`(LZ-String) 또는 평문 `json`을 읽어 장면 JSON을 돌려준다. 해석에 실패하면 예외 대신 오류 값을 돌려준다.
+  - 실제 샘플(Obsidian Excalidraw 플러그인 2.27.3)로 확인한 형식: frontmatter `excalidraw-plugin: parsed`, `## Text Elements`, `%%`로 감싼 `## Drawing` 아래 ` ```compressed-json ` 블록. 압축 문자열은 **여러 줄로 나뉘어 있으므로** 공백과 개행을 모두 제거한 뒤 `decompressFromBase64`로 풀어야 하고, 개행은 CRLF일 수 있다. 풀면 `type/version/source/elements/appState/files`를 가진 Excalidraw 장면 JSON이 나온다.
 
 ### 5.3 Webhook (`POST /api/github-webhook`)
 1. 원본 본문을 `GITHUB_WEBHOOK_SECRET`으로 HMAC-SHA256 계산해 `X-Hub-Signature-256`과 timing-safe 비교한다. 다르면 401.
 2. `ping`은 200. `develop`이 아닌 push는 무시(202).
 3. `develop` push면 `tree` 캐시를 무효화한다. **무효화가 알림보다 먼저다.**
-4. 문서 파일(`.md`)이 바뀐 경우에만 알림을 보낸다. GitHub은 10초 안에 응답하지 않으면 실패로 기록하므로, 응답을 먼저 돌려주고 발송은 뒤에서 처리한다. (Vercel에서의 구체적 방식은 구현 계획 단계에서 공식 문서로 확인)
+4. push 이벤트의 변경 파일 목록에서 `DOCS_PATHS` 아래의 문서 파일(`.md`)이 바뀐 경우에만 알림을 보낸다. (`develop`에 PR이 머지되면 push 이벤트가 생기므로 PR 조회는 필요 없다.) GitHub은 10초 안에 응답하지 않으면 실패로 기록하므로, 응답을 먼저 돌려주고 발송은 뒤에서 처리한다. (Vercel에서의 구체적 방식은 구현 계획 단계에서 공식 문서로 확인)
 5. **중복 방지.** push 이벤트의 커밋 SHA를 `notified_commits`에 기록하고, 이미 있으면 알림을 다시 보내지 않는다. GitHub 수동 재전송 시에도 알림이 두 번 가지 않는다.
 
 ### 5.4 알림 발송 (`lib/push`)
@@ -162,7 +163,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 |---|---|
 | `GITHUB_REPO` | 문서 저장소 `owner/name` |
 | `GITHUB_BRANCH` | `develop` |
-| `DOCS_ROOT` | 문서 폴더 (비우면 저장소 전체) |
+| `DOCS_PATHS` | 표시할 문서 폴더 목록, 쉼표로 구분 (비우면 저장소 전체) |
 | `GITHUB_TOKEN` | 읽기 전용 토큰 |
 | `GITHUB_WEBHOOK_SECRET` | webhook 서명 비밀키 |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web Push |
@@ -201,8 +202,8 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 - 편집 코드는 팀원에게 안전한 경로로 전달하고, 저장소나 채팅 공개 채널에 올리지 않는다.
 
 ## 10. 구현 전 확인 항목
-1. 문서 저장소 주소와 문서 폴더 위치.
-2. 실제 `.excalidraw.md` 샘플 파일. 없으면 구현 첫 단계에서 직접 만들어 형식(압축 여부)을 확인한다.
+1. **표시할 문서 폴더(`DOCS_PATHS`) 확정.** `develop`의 `.md` 103개는 `frontend/docs`(43), `ai/docs`(27), `ai/decision_log`(13), `ai/stt`(4), `.github/ISSUE_TEMPLATE`(3), `ai/extract`(3), `ai`(3), `ai/judge`(2), 그 외 루트와 `docs`, `backend`, `frontend`, `.github`에 각 1개씩 있다. 이슈 템플릿 등 표시하지 않을 폴더를 제외한 목록을 사용자가 정한다.
+2. (확인 완료) 실제 `.excalidraw.md` 샘플로 형식을 검증했다. `compressed-json`(LZ-String base64)이 여러 줄로 나뉘어 있고 풀면 장면 JSON이 나온다. 해당 샘플은 플러그인 2.27.3, 요소 597개(글자 354, 사각형 136, 화살표 101, 마름모 5, 선 1), 삽입 이미지 0개다. 다만 이 샘플은 사용자의 로컬 Obsidian 볼트에 있고 문서 저장소 `develop`에는 아직 `.excalidraw.md`가 없다. 그림을 저장소의 어느 폴더에 둘지는 1번과 함께 정한다.
 3. 캐시 만료 시간 10분이 적절한지.
 4. Neon 깨어남 지연이 webhook 10초 안에서 문제가 되는지, 일정 화면과 cron 응답에 영향이 없는지 실측.
 5. Vercel에서 응답 후 알림을 발송하는 방식.
@@ -210,11 +211,15 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 7. Vercel Cron의 시간대(UTC 가정)와 `CRON_SECRET` 검증 방식(요청 헤더 형식)을 공식 문서로 확인.
 8. 편집 코드 잠금 기준(10분에 5회 실패)과 쿠키 유효 기간(7일)이 적절한지.
 9. Hobby 조건은 수업, 동아리, 무급 팀 기준으로 판단했다. 팀 구성이 바뀌어 급여나 연구비를 받는 사람이 업무로 참여하게 되면 Vercel 지원팀에 문의하거나 다른 배포처를 검토한다.
-10. 시각 단위 알림이 필요해지면 GitHub Actions `schedule`(최소 5분, 60일 비활성화 관리 필요)이나 Pro 플랜을 검토한다. Pro는 비상업 조건과 맞지 않을 수 있어 재검토가 필요하다.
+10. **대형 그림의 전송 방식.** 샘플은 압축 문자열이 약 156KB, 풀면 JSON이 약 569KB다. 서버가 풀어서 JSON을 넘길지, 압축 문자열을 넘기고 브라우저에서 풀지 구현 때 전송 크기와 렌더 속도를 실측해 정한다.
+11. **한글 글꼴 렌더링.** 샘플의 글자 요소는 Excalidraw 기본 글꼴(fontFamily 2, 3)을 쓰고 한글 텍스트가 많다. 브라우저에서 한글이 깨지지 않고 표시되는지 구현 때 확인한다.
+12. 시각 단위 알림이 필요해지면 GitHub Actions `schedule`(최소 5분, 60일 비활성화 관리 필요)이나 Pro 플랜을 검토한다. Pro는 비상업 조건과 맞지 않을 수 있어 재검토가 필요하다.
 
 ## 11. 확인한 공식 문서
 - GitHub REST API: 인증 없음 시간당 60회, 토큰 5,000회. secondary 한도(동시 요청 100건 등) 존재.
 - GitHub webhook: 실패한 전송을 자동 재전송하지 않고, 응답 제한은 10초.
+- GitHub PR 파일 목록 API(미사용): 응답에 파일 경로와 상태가 있지만 경로로 거르는 파라미터는 없고, 기본 30개에 최대 100개씩, 응답은 최대 3,000개 파일까지다.
+- 문서 저장소(직접 조회): 공개, 기본 브랜치 `develop`, 조회한 계정의 권한은 admin(webhook 등록 가능), `develop` 트리는 875개 항목에 `.md` 103개, `.excalidraw.md` 0개.
 - GitHub Actions `schedule`(미채택): 최소 5분 간격, 기본 UTC, 부하 시 지연 가능, 기본 브랜치에서만 실행, 공개 저장소는 60일간 활동이 없으면 예약 워크플로가 자동 비활성화.
 - Vercel Hobby: 비상업 개인 사용 전용, 팀 협업 기능 없음, 함수 최대 300초.
 - Vercel Cron Jobs: Hobby는 하루 1회, 정밀도는 시 단위(±59분), 더 자주 도는 표현식은 배포 실패. Pro는 분 단위. 프로젝트당 크론 100개.
