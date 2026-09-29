@@ -163,7 +163,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 |---|---|
 | `GITHUB_REPO` | 문서 저장소 `owner/name` |
 | `GITHUB_BRANCH` | `develop` |
-| `DOCS_PATHS` | 표시할 문서 폴더 목록, 쉼표로 구분 (비우면 저장소 전체) |
+| `DOCS_PATHS` | 표시할 문서 폴더 목록, 쉼표로 구분, 하위 폴더 포함 (비우면 저장소 전체). 초기값은 테스트용 `frontend/docs/plan` |
 | `GITHUB_TOKEN` | 읽기 전용 토큰 |
 | `GITHUB_WEBHOOK_SECRET` | webhook 서명 비밀키 |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Web Push |
@@ -184,7 +184,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 - 스케줄러 누락과 발송 실패 처리는 5.7을 따른다.
 
 ## 8. 테스트 (TDD, 순수 함수부터)
-- **변환 모듈:** frontmatter 유무, 위키링크 변형(별칭, 제목 지정, 임베드, 없는 대상, 동명이인), Excalidraw(압축, 평문, 손상 데이터).
+- **변환 모듈:** frontmatter 유무, 위키링크 변형(별칭, 제목 지정, 임베드, 없는 대상, 동명이인), Excalidraw(압축, 평문, 손상 데이터, 여러 줄로 나뉜 압축 문자열, CRLF), 공백·작은따옴표·한글이 든 파일 경로의 URL 처리.
 - **Webhook:** 올바른/틀린 서명, 브랜치 필터, `ping`, 같은 SHA 재전송 시 알림 중복 없음.
 - **GitHub 클라이언트:** 같은 SHA는 캐시 재사용, 한도 초과 시 캐시 폴백.
 - **알림:** `web-push` 모킹, 410 응답 시 구독 행 삭제.
@@ -202,8 +202,8 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 - 편집 코드는 팀원에게 안전한 경로로 전달하고, 저장소나 채팅 공개 채널에 올리지 않는다.
 
 ## 10. 구현 전 확인 항목
-1. **표시할 문서 폴더(`DOCS_PATHS`) 확정.** `develop`의 `.md` 103개는 `frontend/docs`(43), `ai/docs`(27), `ai/decision_log`(13), `ai/stt`(4), `.github/ISSUE_TEMPLATE`(3), `ai/extract`(3), `ai`(3), `ai/judge`(2), 그 외 루트와 `docs`, `backend`, `frontend`, `.github`에 각 1개씩 있다. 이슈 템플릿 등 표시하지 않을 폴더를 제외한 목록을 사용자가 정한다.
-2. (확인 완료) 실제 `.excalidraw.md` 샘플로 형식을 검증했다. `compressed-json`(LZ-String base64)이 여러 줄로 나뉘어 있고 풀면 장면 JSON이 나온다. 해당 샘플은 플러그인 2.27.3, 요소 597개(글자 354, 사각형 136, 화살표 101, 마름모 5, 선 1), 삽입 이미지 0개다. 다만 이 샘플은 사용자의 로컬 Obsidian 볼트에 있고 문서 저장소 `develop`에는 아직 `.excalidraw.md`가 없다. 그림을 저장소의 어느 폴더에 둘지는 1번과 함께 정한다.
+1. (확정) 표시할 문서 폴더의 초기값은 테스트용으로 `frontend/docs/plan` 하나다. 이 폴더에는 현재 `.md` 6개(0.2KB~98KB)가 있고 하위 폴더는 없다. 폴더를 늘리는 것은 `DOCS_PATHS` 설정값 변경만으로 된다. 참고로 `develop`의 `.md` 103개는 `frontend/docs`(43), `ai/docs`(27), `ai/decision_log`(13), `ai/stt`(4), `.github/ISSUE_TEMPLATE`(3) 등에 있다.
+2. (확인 완료) 실제 `.excalidraw.md` 샘플로 형식을 검증했다. `compressed-json`(LZ-String base64)이 여러 줄로 나뉘어 있고 풀면 장면 JSON이 나온다. 해당 샘플은 플러그인 2.27.3, 요소 597개(글자 354, 사각형 136, 화살표 101, 마름모 5, 선 1), 삽입 이미지 0개다. 다만 이 샘플은 사용자의 로컬 Obsidian 볼트에 있고 문서 저장소 `develop`에는 아직 `.excalidraw.md`가 없다. 그림도 같은 `frontend/docs/plan` 폴더에 둔다(확정). 저장소에 그림을 올리는 일은 사용자가 직접 한다. 샘플 파일명 `Manager's Manager 프론트엔드 흐름.excalidraw.md`에는 공백, 작은따옴표, 한글이 들어 있어 경로 처리 테스트에 쓴다.
 3. 캐시 만료 시간 10분이 적절한지.
 4. Neon 깨어남 지연이 webhook 10초 안에서 문제가 되는지, 일정 화면과 cron 응답에 영향이 없는지 실측.
 5. Vercel에서 응답 후 알림을 발송하는 방식.
