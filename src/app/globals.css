@@ -176,6 +176,16 @@ a {
   overflow: hidden;
 }
 
+/*
+ * 문서 글 사이의 그림은 처음에 잠가 둔다. Excalidraw 캔버스의 touch-action: none 때문에
+ * 잠그지 않으면 폰에서 그림 위를 스와이프할 때 페이지가 스크롤되지 않는다.
+ * 자식(메뉴, 확대 버튼)이 pointer-events를 다시 켜지 못하도록 !important를 쓴다.
+ */
+.drawing-locked,
+.drawing-locked * {
+  pointer-events: none !important;
+}
+
 .drawing-loading {
   padding: 1rem;
   color: var(--muted);
