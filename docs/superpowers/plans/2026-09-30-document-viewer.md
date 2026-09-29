@@ -3857,3 +3857,18 @@ git commit -m "docs: add webhook simulation script and operations notes"
 계획 2(5.3의 알림 발송과 중복 방지, 5.4, 5.5, 6.3)와 계획 3(5.6~5.8, 6.4)은 이 계획의 범위 밖이다.
 
 **구현 중 스펙과 달라진 점** (스펙에는 이미 반영했다): 원본 이미지 주소는 커밋 SHA가 아니라 브랜치 기준이다. 풀 수 없는 상대 링크는 "없는 문서" 표시로 바꾼다.
+
+---
+
+## 최종 검토 후 수정 (실행 기록)
+
+이 계획을 실행한 뒤 전체 브랜치를 새 검토자가 검토했고, 아래 네 가지를 TDD(실패하는 테스트 → 수정 → 전체 통과)로 고쳤다. **위의 코드 블록은 이 수정 전의 상태이므로, 계획을 다시 실행한다면 이 수정을 함께 적용해야 한다.** 수정 후 테스트는 15개 파일 118개다.
+
+| 문제 | 왜 문제인가 | 수정 (파일) |
+|---|---|---|
+| **Critical** frontmatter가 `---js`로 시작하면 gray-matter가 코드를 실행한다 | 머지된 문서 하나로 서버에서 임의 코드가 돌고 환경변수(토큰, 비밀키)를 읽을 수 있다 | `src/lib/transform/frontmatter.ts`에서 `js`, `javascript` 엔진을 끈다. 테스트 2개 추가 |
+| **Important** `error.tsx`의 "다시 시도"가 `reset`을 불렀다 | Next 16.3에서 `reset`은 서버 컴포넌트 오류를 복구하지 못한다. `retry`가 다시 불러온다 | `src/app/error.tsx`가 `retry`를 호출. `src/app/error.test.ts` 추가 |
+| **Important** 임베드한 그림 blob 하나를 못 받으면 문서 전체가 오류 화면이 된다 | 그 그림 자리만 실패해야 한다 | `src/lib/docs.ts`의 `loadDrawing`이 실패를 잡아 `{ ok: false, reason: "fetch-failed" }`를 돌려주고 `DrawingBlock`에 문구 추가. `src/lib/docs.test.ts` 추가 |
+| **Important** 문서 속 그림이 폰 스와이프와 휠을 가져가 페이지가 스크롤되지 않는다 | Excalidraw 캔버스의 `touch-action: none` 때문 | 문서 속 그림은 잠가 두고 "그림 조작하기" 버튼으로 켠다: `src/components/InlineDrawing.tsx` 추가, `DrawingBlock`에서 사용, `globals.css`에 `.drawing-locked` 추가. 그림 단독 화면은 그대로 조작 가능 |
+
+보류한 Minor 항목(Excalidraw CSS 지연 로딩, 압축 해제 크기 제한, 글꼴 자체 호스팅, 접근성 등)은 이 저장소의 후속 작업으로 남겼다.
