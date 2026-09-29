@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { NotificationBell } from "@/components/NotificationBell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Link href="/" className="site-title">
             Docs Backoffice
           </Link>
+          <NotificationBell />
         </header>
         {children}
       </body>

@@ -30,6 +30,9 @@ a {
 }
 
 .site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 0.75rem 16px;
   border-bottom: 1px solid var(--border);
 }
@@ -38,6 +41,41 @@ a {
   color: var(--fg);
   font-weight: 700;
   text-decoration: none;
+}
+
+.notify {
+  position: relative;
+}
+
+.notify-button {
+  padding: 0.25rem 0.6rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.notify-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  width: min(20rem, calc(100vw - 32px));
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.notify-panel p {
+  margin: 0 0 0.6rem;
+}
+
+.notify-error {
+  color: #cf222e;
 }
 
 .page {
