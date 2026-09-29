@@ -1,49 +1,206 @@
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
-body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #656d76;
+  --border: #d0d7de;
+  --accent: #0969da;
+  --code-bg: #f6f8fa;
+  --banner-bg: #fff8c5;
+  --error-bg: #ffebe9;
 }
 
 * {
   box-sizing: border-box;
-  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
   margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  line-height: 1.7;
 }
 
 a {
-  color: inherit;
+  color: var(--accent);
+}
+
+.site-header {
+  padding: 0.75rem 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-title {
+  color: var(--fg);
+  font-weight: 700;
   text-decoration: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+.page {
+  max-width: 48rem;
+  margin: 0 auto;
+  padding: 1.25rem 16px 4rem;
+}
+
+.page-wide {
+  max-width: 72rem;
+}
+
+.crumb,
+.meta {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.tag {
+  margin-left: 0.5rem;
+}
+
+.banner {
+  padding: 0.6rem 0.9rem;
+  border-radius: 6px;
+  background: var(--banner-bg);
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.group h2 {
+  font-size: 1rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.tree {
+  list-style: none;
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.tree > li {
+  padding: 0.15rem 0;
+}
+
+.tree summary {
+  cursor: pointer;
+}
+
+.toc {
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.toc ul {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+}
+
+.markdown {
+  overflow-wrap: anywhere;
+}
+
+.markdown img {
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown pre {
+  overflow-x: auto;
+  padding: 0.85rem 1rem;
+  border-radius: 6px;
+  background: var(--code-bg);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.markdown code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  background: var(--code-bg);
+  font-size: 0.9em;
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+}
+
+.markdown table {
+  display: block;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.markdown th,
+.markdown td {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.markdown blockquote {
+  margin-left: 0;
+  padding-left: 1rem;
+  border-left: 4px solid var(--border);
+  color: var(--muted);
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  scroll-margin-top: 1rem;
+}
+
+.wikilink-missing {
+  color: var(--muted);
+  text-decoration: underline dotted;
+  cursor: help;
+}
+
+.drawing-figure {
+  margin: 1.25rem 0;
+}
+
+.drawing {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.drawing-loading {
+  padding: 1rem;
+  color: var(--muted);
+}
+
+.drawing-error {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: var(--error-bg);
+}
+
+figcaption {
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.footer-meta {
+  margin-top: 2rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--code-bg);
+  font: inherit;
+  cursor: pointer;
 }
