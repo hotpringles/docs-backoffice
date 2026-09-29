@@ -95,14 +95,14 @@ GitHub와 Next.js를 모르는 순수 함수 모음이다. 단독으로 테스�
 1. 원본 본문을 `GITHUB_WEBHOOK_SECRET`으로 HMAC-SHA256 계산해 `X-Hub-Signature-256`과 timing-safe 비교한다. 다르면 401.
 2. `ping`은 200. `develop`이 아닌 push는 무시(202).
 3. `develop` push면 `tree` 캐시를 무효화한다. **무효화가 알림보다 먼저다.** Next.js 16에서 외부 서비스가 부르는 경로는 `revalidateTag('tree', { expire: 0 })`로 즉시 만료시킨다.
-4. push 이벤트의 변경 파일 목록에서 `DOCS_PATHS` 아래의 문서 파일(`.md`)이 바뀐 경우에만 알림을 보낸다. (`develop`에 PR이 머지되면 push 이벤트가 생기므로 PR 조회는 필요 없다.) GitHub은 10초 안에 응답하지 않으면 실패로 기록하므로, 응답을 먼저 돌려주고 발송은 뒤에서 처리한다. (Vercel에서의 구체적 방식은 구현 계획 단계에서 공식 문서로 확인)
+4. push 이벤트의 변경 파일 목록에서 `DOCS_PATHS` 아래의 문서 파일(`.md`)이 바뀐 경우에만 알림을 보낸다. (`develop`에 PR이 머지되면 push 이벤트가 생기므로 PR 조회는 필요 없다.) GitHub은 10초 안에 응답하지 않으면 실패로 기록하므로, `after`(`next/server`, Next.js 15.1부터 정식)로 응답 뒤에 발송한다. Vercel에서는 `waitUntil`로 구현되어 응답이 끝난 뒤에도 함수의 최대 실행 시간까지 작업이 이어진다.
 5. **중복 방지.** push 이벤트의 커밋 SHA를 `notified_commits`에 기록하고, 이미 있으면 알림을 다시 보내지 않는다. GitHub 수동 재전송 시에도 알림이 두 번 가지 않는다.
 
 ### 5.4 알림 발송 (`lib/push`)
 webhook(5.3)과 스케줄러(5.7)가 함께 쓰는 공용 모듈이다. 호출하는 쪽이 알림의 제목, 본문, 열 주소(`url`)를 넘긴다.
 - **서버가 상시 깨어 있을 필요는 없다.** 알림 배달은 브라우저 벤더가 운영하는 push service가 맡고, 사용자 기기에서는 앱이 닫혀 있어도 service worker가 필요할 때 자동으로 시작되어 알림을 처리한다. (MDN Push API) 우리 서버는 webhook이나 cron이 호출해 발송하는 순간에만 실행되면 되므로, 요청 시에만 실행되는 Vercel 서버리스 함수와 잘 맞는다.
 - VAPID 키로 `web-push`를 사용해 모든 구독자에게 보낸다.
-- 문서 갱신 알림 문구는 "문서가 업데이트됐어요"에 바뀐 문서 제목 몇 개를 붙인다. push 페이로드의 커밋 목록이 잘리면 제목 없이 문구만 보낸다. 열 주소는 `/`.
+- 문서 갱신 알림 문구는 "문서가 업데이트됐어요"에 바뀐 문서의 **파일 이름** 세 개까지를 붙이고 나머지는 "외 N건"으로 줄인다(제목을 얻으려면 문서마다 GitHub 호출이 더 필요해서 webhook 처리가 느려진다). 파일 이름은 40자, 주소는 500자로 제한한다. 한 문서만 바뀌었으면 그 문서를, 여러 개면 `/`를 연다.
 - 만료된 구독(404/410 응답으로 알려진 경우)은 행을 삭제한다. 동작은 구현 때 실제로 확인한다.
 
 ### 5.5 데이터베이스 (Neon Postgres)
@@ -113,7 +113,7 @@ events(id PK, title, event_date date, memo null, remind_offsets int[], created_a
 sent_reminders(event_id FK on delete cascade, offset_days, sent_on date, PK(event_id, offset_days))
 auth_attempts(ip_hash PK, failed_count, window_start)
 ```
-- 알림 구독은 로그인이 없으므로 누구나 할 수 있다. 문서가 공개 저장소 내용이므로 수용하고, 구독 요청은 형식만 검증한다.
+- 알림 구독은 로그인이 없으므로 누구나 할 수 있다. 문서가 공개 저장소 내용이므로 수용하되, 구독 주소(endpoint)는 실제 푸시 서비스(FCM, Mozilla, Apple, Windows)의 주소만 허용하고(서버가 그 주소로 요청을 보내므로 아무 주소나 받으면 SSRF가 된다), 키 형식을 검증하고, 구독은 최대 100대로 제한한다.
 - `events`는 원본이 Neon뿐이다. Neon Free는 수동 스냅샷이 1개이고 모니터링 보존이 1일이라, 일정이 사라져도 다시 입력할 수 있다는 전제로 수용한다.
 - Neon은 유휴 5분 뒤 자동 중지되고 요청이 오면 깨어난다. 깨어나는 지연은 구현 때 실측한다.
 
@@ -214,7 +214,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 2. (확인 완료) 실제 `.excalidraw.md` 샘플로 형식을 검증했다. `compressed-json`(LZ-String base64)이 여러 줄로 나뉘어 있고 풀면 장면 JSON이 나온다. 해당 샘플은 플러그인 2.27.3, 요소 597개(글자 354, 사각형 136, 화살표 101, 마름모 5, 선 1), 삽입 이미지 0개다. 다만 이 샘플은 사용자의 로컬 Obsidian 볼트에 있고 문서 저장소 `develop`에는 아직 `.excalidraw.md`가 없다. 그림도 같은 `frontend/docs/plan` 폴더에 둔다(확정). 저장소에 그림을 올리는 일은 사용자가 직접 한다. 샘플 파일명 `Manager's Manager 프론트엔드 흐름.excalidraw.md`에는 공백, 작은따옴표, 한글이 들어 있어 경로 처리 테스트에 쓴다.
 3. 캐시 만료 시간 10분이 적절한지.
 4. Neon 깨어남 지연이 webhook 10초 안에서 문제가 되는지, 일정 화면과 cron 응답에 영향이 없는지 실측.
-5. Vercel에서 응답 후 알림을 발송하는 방식.
+5. (확인 완료) Vercel에서 응답 후 알림을 발송하는 방식은 `after`(Next.js 15.1부터 정식)를 쓴다. Vercel에서는 `waitUntil`로 구현되어 응답 뒤에도 최대 실행 시간까지 이어진다.
 6. push 페이로드의 커밋 목록이 큰 push에서 잘리는 경우의 동작.
 7. Vercel Cron의 시간대(UTC 가정)와 `CRON_SECRET` 검증 방식(요청 헤더 형식)을 공식 문서로 확인.
 8. 편집 코드 잠금 기준(10분에 5회 실패)과 쿠키 유효 기간(7일)이 적절한지.

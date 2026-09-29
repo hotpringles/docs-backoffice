@@ -25,6 +25,9 @@ npm run dev
 | `DOCS_PATHS` | 표시할 문서 폴더 목록, 쉼표로 구분, 하위 폴더 포함. 비우면 저장소 전체 |
 | `GITHUB_TOKEN` | 읽기 전용 토큰. 없어도 되지만 GitHub API가 시간당 60회로 제한된다(토큰이 있으면 5,000회) |
 | `GITHUB_WEBHOOK_SECRET` | webhook 서명 비밀키. 저장소 webhook 설정에 넣은 값과 같아야 한다 |
+| `DATABASE_URL` | Neon Postgres 연결 문자열 (푸시 알림) |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | 웹 푸시 VAPID 키 한 쌍 (푸시 알림) |
+| `VAPID_SUBJECT` | `mailto:이메일` 또는 `https://주소` (푸시 알림) |
 
 ## 명령
 
@@ -33,6 +36,9 @@ npm test            # 단위 테스트
 npm run typecheck   # 타입 검사
 npm run lint        # 린트
 npm run build       # 프로덕션 빌드
+npm run vapid       # 푸시 알림용 VAPID 키 한 쌍 만들기
+npm run db:migrate  # Neon에 마이그레이션 적용 (DATABASE_URL 필요, 여러 번 실행해도 안전)
+npm run push:test -- "제목" "본문"   # 구독한 모든 기기에 시험 알림 보내기
 ```
 
 webhook 요청을 흉내 내려면 서버를 띄운 뒤 다음을 실행합니다.
@@ -50,12 +56,30 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 - Secret: `GITHUB_WEBHOOK_SECRET`과 같은 값
 - Events: Just the push event
 
+## 푸시 알림 설정
+
+`develop`에서 표시 대상 문서가 바뀌면 구독한 기기에 알림을 보냅니다. 로그인이 없어서 누구나 종 아이콘으로 구독할 수 있습니다(구독은 최대 100대).
+
+1. Neon Postgres를 만들고 연결 문자열을 `DATABASE_URL`에 넣습니다. (Vercel에서는 Marketplace의 Neon을 프로젝트에 연결하면 환경변수가 자동으로 들어갑니다.)
+2. `npm run vapid`로 키 한 쌍을 만들어 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`에 넣고, `VAPID_SUBJECT`(예: `mailto:me@example.com`)도 채웁니다.
+3. `npm run db:migrate`로 테이블을 만듭니다.
+4. 사이트를 열고 헤더의 종 아이콘 → "알림 받기"를 누릅니다. `npm run push:test`로 알림이 오는지 확인합니다.
+
+- **iPhone·iPad**는 Safari의 공유 버튼 → **홈 화면에 추가**로 설치한 앱에서만 알림을 받을 수 있습니다(iOS 16.4 이상).
+- **개발 중에는** 서비스 워커와 푸시가 `http://localhost`에서도 동작합니다. 폰에서 확인하려면 HTTPS 주소(배포)가 필요합니다.
+- 알림에 필요한 환경변수가 하나라도 없으면 알림만 건너뛰고, 문서 화면과 webhook 처리는 그대로 동작합니다(서버 로그에 무엇이 빠졌는지 남습니다).
+- 문서가 바뀐 push는 GitHub이 같은 이벤트를 다시 보내도(수동 재전송) 알림이 한 번만 갑니다.
+- 알림 문구는 문서 제목 대신 **파일 이름**을 씁니다(제목을 얻으려면 GitHub 호출이 더 필요해서 webhook 처리가 느려집니다).
+
 ## 구조
 
 - `src/lib/transform/`: 문서를 화면용 데이터로 바꾸는 순수 함수 (frontmatter, 위키링크, 링크 다시 쓰기, sanitize, Excalidraw 추출)
 - `src/lib/github/`: GitHub API 클라이언트와 파일 트리 도우미
 - `src/lib/webhook/`: 서명 검증과 이벤트 판단
-- `src/app/`: 문서 목록(`/`), 문서 상세(`/docs/...`), webhook 엔드포인트(`/api/github-webhook`)
+- `src/lib/db/`: 데이터베이스 연결(Neon), 마이그레이션 실행기, 테스트용 메모리 Postgres. 마이그레이션 SQL은 `db/migrations/`
+- `src/lib/push/`: 구독 검증과 저장, 알림 문구와 발송, 브라우저 쪽 구독 로직
+- `public/sw.js`: 알림을 화면에 띄우는 서비스 워커
+- `src/app/`: 문서 목록(`/`), 문서 상세(`/docs/...`), webhook(`/api/github-webhook`), 구독 API(`/api/push/subscriptions`), 앱 설명(`/manifest.webmanifest`)과 아이콘
 
 ## 운영 메모
 

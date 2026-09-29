@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "tsx --env-file-if-exists=.env.local scripts/migrate.ts",
+    "push:test": "tsx --env-file-if-exists=.env.local scripts/send-test-push.ts",
+    "vapid": "web-push generate-vapid-keys",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
