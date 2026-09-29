@@ -77,20 +77,23 @@ Vercel Cron (매일 UTC 00:00 = 한국시간 09:00~09:59경)
 ### 5.1 GitHub 클라이언트 (`lib/github`)
 - `getTree()`: `develop`의 파일 트리(경로, blob SHA). 캐시 태그 `tree`, 만료 시간은 안전장치로 10분(제안값). 트리에서는 `DOCS_PATHS`에 지정한 폴더(여러 개 가능) 아래의 `.md`만 남긴다. 저장소에 코드와 이슈 템플릿 등이 섞여 있기 때문이다.
 - `getBlob(sha)`: 파일 내용. **SHA를 키로 캐싱**한다. 내용이 같으면 SHA도 같으므로 바뀐 파일만 다시 받는다.
-- 인증은 읽기 전용 토큰 하나(`GITHUB_TOKEN`). 한도(인증 시 시간당 5,000회) 초과(403/429)는 전용 오류로 던지고, 화면은 캐시에 남은 내용으로 대체한다.
+- `getLatestCommit()`: 최신 커밋의 SHA와 시각(화면의 "마지막 반영"). 같은 태그와 만료 시간을 쓴다.
+- 인증은 읽기 전용 토큰 하나(`GITHUB_TOKEN`). 한도(인증 시 시간당 5,000회) 초과(403/429)는 전용 오류로 던지고, 화면은 마지막으로 성공한 값으로 대체한다. 이 대체는 서버 인스턴스 메모리에 남은 값을 쓰는 최선 노력 방식이라, 새 인스턴스에서 처음부터 실패하면 오류 화면이 나온다.
 
 ### 5.2 변환 모듈 (`lib/transform`)
 GitHub와 Next.js를 모르는 순수 함수 모음이다. 단독으로 테스트한다.
 - `parseDocument(raw, path, tree)`: 제목, 태그, 날짜(frontmatter), 본문, 목차, 링크 목록을 돌려준다. 제목은 frontmatter `title`, 없으면 파일명.
 - 위키링크: `[[이름]]`, `[[이름|별칭]]`, `[[이름#제목]]`. 대상은 트리에서 파일명으로 찾고, 동명이인은 경로순 첫 번째. 대상이 없으면 "없는 문서"로 표시한다.
-- 임베드: `![[그림.excalidraw]]`는 그림 임베드로, 이미지 임베드와 일반 이미지는 `raw.githubusercontent.com` 주소(커밋 SHA 고정)로 바꿔 브라우저가 직접 받게 한다.
+- 임베드: `![[그림.excalidraw]]`는 그림 임베드로, 이미지 임베드와 일반 이미지는 원본 파일 주소(`raw.githubusercontent.com`, 브랜치 기준)로 바꿔 브라우저가 직접 받게 한다. 커밋 SHA로 고정하려면 API 호출이 하나 더 필요해서 1단계에서는 브랜치 기준으로 단순화했고, GitHub CDN 캐시 때문에 이미지 교체가 최대 수 분 늦게 보일 수 있다.
+- 상대 링크: 본문의 상대 링크와 상대 이미지는 저장소 경로로 풀어서 다시 쓴다. 표시 대상 문서는 사이트 안 주소로, 그 밖의 파일과 폴더는 GitHub 화면 주소로, 이미지는 원본 파일 주소로 바꾼다. 저장소에서 찾지 못한 상대 링크(예: `/src/...`)는 우리 사이트의 없는 경로로 이어지지 않게 링크를 걷어내고 "없는 문서" 표시로 바꾼다.
+- 보안: 문서 안의 원본 HTML은 버리고, 변환 결과를 한 번 더 걸러(sanitize) 스크립트, 이벤트 핸들러, 위험한 주소를 없앤다.
 - `extractExcalidraw(raw)`: `## Drawing` 블록의 `compressed-json`(LZ-String) 또는 평문 `json`을 읽어 장면 JSON을 돌려준다. 해석에 실패하면 예외 대신 오류 값을 돌려준다.
   - 실제 샘플(Obsidian Excalidraw 플러그인 2.27.3)로 확인한 형식: frontmatter `excalidraw-plugin: parsed`, `## Text Elements`, `%%`로 감싼 `## Drawing` 아래 ` ```compressed-json ` 블록. 압축 문자열은 **여러 줄로 나뉘어 있으므로** 공백과 개행을 모두 제거한 뒤 `decompressFromBase64`로 풀어야 하고, 개행은 CRLF일 수 있다. 풀면 `type/version/source/elements/appState/files`를 가진 Excalidraw 장면 JSON이 나온다.
 
 ### 5.3 Webhook (`POST /api/github-webhook`)
 1. 원본 본문을 `GITHUB_WEBHOOK_SECRET`으로 HMAC-SHA256 계산해 `X-Hub-Signature-256`과 timing-safe 비교한다. 다르면 401.
 2. `ping`은 200. `develop`이 아닌 push는 무시(202).
-3. `develop` push면 `tree` 캐시를 무효화한다. **무효화가 알림보다 먼저다.**
+3. `develop` push면 `tree` 캐시를 무효화한다. **무효화가 알림보다 먼저다.** Next.js 16에서 외부 서비스가 부르는 경로는 `revalidateTag('tree', { expire: 0 })`로 즉시 만료시킨다.
 4. push 이벤트의 변경 파일 목록에서 `DOCS_PATHS` 아래의 문서 파일(`.md`)이 바뀐 경우에만 알림을 보낸다. (`develop`에 PR이 머지되면 push 이벤트가 생기므로 PR 조회는 필요 없다.) GitHub은 10초 안에 응답하지 않으면 실패로 기록하므로, 응답을 먼저 돌려주고 발송은 뒤에서 처리한다. (Vercel에서의 구체적 방식은 구현 계획 단계에서 공식 문서로 확인)
 5. **중복 방지.** push 이벤트의 커밋 SHA를 `notified_commits`에 기록하고, 이미 있으면 알림을 다시 보내지 않는다. GitHub 수동 재전송 시에도 알림이 두 번 가지 않는다.
 
@@ -145,7 +148,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 - 위키링크는 내부 링크로, 없는 대상은 회색 "없는 문서"로 표시한다.
 - Excalidraw 그림은 그 자리에서 읽기 전용(확대와 이동 가능)으로 그린다. `.excalidraw.md`를 직접 열면 그림이 화면 전체를 차지한다.
 - 하단에 "GitHub에서 보기" 링크를 둔다.
-- 서버는 그림 JSON만 추출해 넘기고, 브라우저 전용 컴포넌트가 Excalidraw 패키지를 동적으로 불러와 그린다.
+- 서버는 그림 JSON만 추출해 넘기고, 브라우저 전용 컴포넌트가 Excalidraw 패키지를 동적으로 불러와 그린다. 큰 그림도 처음에는 화면 안에 다 들어오도록 축소해서(`fitToViewport`) 보여주고, 확대와 이동은 사용자가 한다.
 
 ### 6.3 알림 설정 (헤더의 종 아이콘, 작은 패널)
 - "알림 받기" 버튼으로 권한을 요청하고 구독 정보를 저장한다. 해제도 같은 자리에서 한다.
@@ -212,7 +215,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 8. 편집 코드 잠금 기준(10분에 5회 실패)과 쿠키 유효 기간(7일)이 적절한지.
 9. Hobby 조건은 수업, 동아리, 무급 팀 기준으로 판단했다. 팀 구성이 바뀌어 급여나 연구비를 받는 사람이 업무로 참여하게 되면 Vercel 지원팀에 문의하거나 다른 배포처를 검토한다.
 10. **대형 그림의 전송 방식.** 샘플은 압축 문자열이 약 156KB, 풀면 JSON이 약 569KB다. 서버가 풀어서 JSON을 넘길지, 압축 문자열을 넘기고 브라우저에서 풀지 구현 때 전송 크기와 렌더 속도를 실측해 정한다.
-11. **한글 글꼴 렌더링.** 샘플의 글자 요소는 Excalidraw 기본 글꼴(fontFamily 2, 3)을 쓰고 한글 텍스트가 많다. 브라우저에서 한글이 깨지지 않고 표시되는지 구현 때 확인한다.
+11. (확인 완료) **한글 글꼴 렌더링.** 실제 샘플(597개 요소)을 브라우저에서 그려 보았고 한글이 깨지지 않는다. 다만 그림이 커서 화면에 맞추면 10%까지 축소되므로, 글자를 읽으려면 확대해야 한다.
 12. 시각 단위 알림이 필요해지면 GitHub Actions `schedule`(최소 5분, 60일 비활성화 관리 필요)이나 Pro 플랜을 검토한다. Pro는 비상업 조건과 맞지 않을 수 있어 재검토가 필요하다.
 
 ## 11. 확인한 공식 문서
@@ -225,6 +228,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 - Vercel Cron Jobs: Hobby는 하루 1회, 정밀도는 시 단위(±59분), 더 자주 도는 표현식은 배포 실패. Pro는 분 단위. 프로젝트당 크론 100개.
 - Vercel Blob(미사용): Hobby 저장 1GB, 쓰기 작업 첫 2,000건.
 - iOS Web Push: iOS/iPadOS 16.4 이상, 홈 화면 웹앱에서만, 권한 요청에 사용자 동작 필요.
+- Next.js 16.3.7: `cacheComponents`를 켜지 않은 기존 캐시 모델에서 `fetch`는 기본으로 캐시되지 않고 `cache: 'force-cache'`나 `next.revalidate`, `next.tags`로 캐시한다. `revalidateTag`는 두 번째 인자가 필요하고, 외부 호출은 `{ expire: 0 }`으로 즉시 만료시킨다. 동적 라우트의 `params`는 Promise이고, 실제로 확인한 결과 이미 디코딩된 값(한글, 공백, 작은따옴표, `%`)으로 온다. `%2F`는 슬래시가 든 한 조각으로 온다.
 - Next.js PWA 가이드: 구독 정보는 운영 환경에서 DB에 저장할 것을 권장.
 - MDN Push API: 앱이 닫혀 있거나 로드되지 않은 상태에서도 push를 받을 수 있고, service worker는 메시지가 오면 필요할 때 시작된다. 앱 서버는 구독 endpoint로 언제든 발송할 수 있다.
 - Neon Free: 프로젝트당 0.5GB, 월 100 CU-hours, 5분 유휴 후 scale to zero, 수동 스냅샷 1개, 모니터링 보존 1일.
