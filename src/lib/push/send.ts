@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import type { Db } from "@/lib/db/types";
+import { isAllowedPushEndpoint } from "./endpoint";
 import type { PushPayload } from "./payload";
 import { listSubscriptions, removeSubscription, type PushSubscriptionInput } from "./subscriptions";
 
@@ -49,6 +50,8 @@ export type VapidConfig = { subject: string; publicKey: string; privateKey: stri
 /** `web-push`로 실제 발송하는 Sender. VAPID 정보는 호출마다 넘겨서 전역 상태를 쓰지 않는다. */
 export function createWebPushSender(vapid: VapidConfig): Sender {
   return async (subscription, payload) => {
+    // 저장할 때 이미 검사하지만, 서버가 요청을 보내는 바로 이 자리에서 한 번 더 확인한다(SSRF의 마지막 방어선).
+    if (!isAllowedPushEndpoint(subscription.endpoint)) throw new Error("허용되지 않는 푸시 주소예요.");
     await webpush.sendNotification(
       { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
       payload,
