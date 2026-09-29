@@ -14,9 +14,19 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-/** 사이트 안의 경로(`/`로 시작, `//`로 시작하지 않음)만 열 수 있다. 그 밖의 값은 홈으로 바꾼다. */
+/**
+ * 사이트 안의 경로만 열 수 있다. 그 밖의 값은 홈으로 바꾼다.
+ * 문자열 모양(`//`로 시작하는지)만 보면 `/\evil.example`이나 `/<탭>/evil.example`처럼 브라우저가 다른 사이트로
+ * 해석하는 값이 통과하므로, 브라우저가 하는 그대로 주소로 해석해 본 뒤 출처(origin)가 같은지 확인한다.
+ */
 function safePath(value) {
-  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") ? value : "/";
+  if (typeof value !== "string" || !value.startsWith("/")) return "/";
+  try {
+    const resolved = new URL(value, self.location.origin);
+    return resolved.origin === self.location.origin ? resolved.pathname + resolved.search + resolved.hash : "/";
+  } catch {
+    return "/";
+  }
 }
 
 function readPayload(event) {

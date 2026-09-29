@@ -7,6 +7,9 @@ type Listener = (event: Record<string, unknown>) => void;
 const ORIGIN = "https://docs.example.com";
 const source = readFileSync("public/sw.js", "utf8");
 
+/** `/`로 시작하고 `//`로는 시작하지 않지만, 브라우저가 주소로 해석하면 다른 사이트가 되는 값들. */
+const BROWSER_RESOLVES_OFF_SITE = ["/\\evil.example/x", "/\t/evil.example/x", "/\n/evil.example/x", "/\r/evil.example/x", "/\\\\evil.example"];
+
 /** 서비스 워커의 전역(`self`)을 흉내 내서 `public/sw.js`를 실제로 실행한다. */
 function loadServiceWorker() {
   const listeners = new Map<string, Listener>();
@@ -89,7 +92,14 @@ describe("push 이벤트", () => {
   });
 
   it("사이트 밖 주소는 홈으로 바꾼다", async () => {
-    for (const url of ["https://evil.example/x", "//evil.example/x", "javascript:alert(1)", "docs/a.md", ""]) {
+    for (const url of [
+      "https://evil.example/x",
+      "//evil.example/x",
+      "javascript:alert(1)",
+      "docs/a.md",
+      "",
+      ...BROWSER_RESOLVES_OFF_SITE,
+    ]) {
       sw.showNotification.mockClear();
       await sw.dispatch("push", sw.pushEvent({ title: "t", body: "b", url }));
       const options = sw.showNotification.mock.calls[0] as unknown as [string, { data: { url: string } }];
@@ -127,7 +137,7 @@ describe("notificationclick 이벤트", () => {
   });
 
   it("사이트 밖 주소나 주소가 없는 알림은 홈을 연다", async () => {
-    for (const url of ["https://evil.example/x", "//evil.example", undefined]) {
+    for (const url of ["https://evil.example/x", "//evil.example", ...BROWSER_RESOLVES_OFF_SITE, undefined]) {
       sw.openWindow.mockClear();
       await sw.dispatch("notificationclick", click(url).event);
       expect(sw.openWindow, String(url)).toHaveBeenCalledWith(`${ORIGIN}/`);
