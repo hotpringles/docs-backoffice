@@ -1,12 +1,37 @@
+/*
+ * 화면 모양: Obsidian의 Serenity 테마(iA Writer 느낌)를 본떴다. 종이 같은 바탕, 얇은 선, 절제된 강조색 하나,
+ * 그림자와 카드를 줄인 평평한 화면이다. 색은 모두 아래 변수로 두어서 다크 모드처럼 색을 통째로 바꿀 때 이 블록만 고치면 된다.
+ */
 :root {
-  --bg: #ffffff;
-  --fg: #1f2328;
-  --muted: #656d76;
-  --border: #d0d7de;
-  --accent: #0969da;
-  --code-bg: #f6f8fa;
-  --banner-bg: #fff8c5;
-  --error-bg: #ffebe9;
+  --bg: #fcfcfa; /* 종이 */
+  --bg-soft: #f3f2ee; /* 코드, 비활성 칸, 마우스를 올렸을 때 */
+  --fg: #2a2a28;
+  --muted: #6f6e69;
+  --border: #e4e2dc;
+  --border-strong: #cfccc4;
+  --accent: #2a5db0;
+  --accent-soft: #e6edf8;
+  --on-accent: #ffffff;
+  --danger: #b4322f;
+  --banner-bg: #f8f0cc;
+  --error-bg: #f9e6e3;
+  --event-bg: #e6edf8;
+  --event-fg: #26509b;
+  --meetup-bg: #e2f0e5;
+  --meetup-fg: #21683a;
+  --ok: #2f7d47;
+  --heat-1: #dcefe0;
+  --heat-2: #b2dbbb;
+  --heat-3: #7dc192;
+  --heat-3-fg: #0f3a1f;
+  --heat-4: #2f7d47;
+  --heat-4-fg: #ffffff;
+  --shadow: 0 6px 24px rgb(0 0 0 / 8%);
+
+  /* 글꼴: iA Writer 글꼴에는 한글이 없어서 글자마다 IBM Plex Sans KR로 넘어간다. */
+  --font-ui: var(--font-quattro), var(--font-plex-kr), system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-prose: var(--font-duo), var(--font-plex-kr), system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-code: var(--font-mono), var(--font-plex-kr), ui-monospace, "D2Coding", Consolas, "Malgun Gothic", monospace;
 }
 
 * {
@@ -21,74 +46,68 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font-family: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: var(--font-ui);
+  font-size: 16px;
   line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 a {
   color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
 }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- 머리글 ---------- */
 
 .site-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 16px;
+  padding: 0.85rem 16px;
   border-bottom: 1px solid var(--border);
 }
 
 .site-title {
   color: var(--fg);
+  font-size: 0.95rem;
   font-weight: 700;
+  letter-spacing: 0.01em;
   text-decoration: none;
-}
-
-.notify {
-  position: relative;
-}
-
-.notify-button {
-  padding: 0.25rem 0.6rem;
-  border: 0;
-  background: transparent;
-  font-size: 1.2rem;
-  line-height: 1;
-}
-
-.notify-panel {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  right: 0;
-  z-index: 10;
-  width: min(20rem, calc(100vw - 32px));
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 12%);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-.notify-panel p {
-  margin: 0 0 0.6rem;
-}
-
-.notify-error {
-  color: #cf222e;
 }
 
 .site-nav {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.25rem 1rem;
+  gap: 0.25rem 1.25rem;
 }
 
 .site-links {
   display: flex;
-  gap: 0.9rem;
-  font-size: 0.95rem;
+  gap: 1rem;
+  font-size: 0.92rem;
 }
 
 .site-links a {
@@ -98,6 +117,41 @@ a {
 
 .site-links a:hover {
   color: var(--fg);
+}
+
+.notify {
+  position: relative;
+}
+
+.notify-button {
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  background: transparent;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.notify-panel {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 10;
+  width: min(20rem, calc(100vw - 32px));
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.notify-panel p {
+  margin: 0 0 0.6rem;
+}
+
+.notify-error {
+  color: var(--danger);
 }
 
 .sr-only {
@@ -112,6 +166,8 @@ a {
   border: 0;
 }
 
+/* ---------- 달력 ---------- */
+
 .cal-nav {
   display: flex;
   align-items: center;
@@ -124,11 +180,15 @@ a {
 }
 
 .cal-nav a {
-  padding: 0.15rem 0.6rem;
-  border: 1px solid var(--border);
+  padding: 0.15rem 0.65rem;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
   color: var(--fg);
   text-decoration: none;
+}
+
+.cal-nav a:hover {
+  background: var(--bg-soft);
 }
 
 .cal-nav .cal-today {
@@ -147,11 +207,11 @@ a {
   padding: 0.3rem 0;
   color: var(--muted);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 500;
 }
 
 .cal th.sun {
-  color: #cf222e;
+  color: var(--danger);
 }
 
 .cal th.sat {
@@ -175,8 +235,12 @@ a {
   text-decoration: none;
 }
 
+.cal-cell:hover {
+  background: var(--bg-soft);
+}
+
 .cal-cell.out {
-  background: var(--code-bg);
+  background: var(--bg-soft);
   color: var(--muted);
 }
 
@@ -195,21 +259,26 @@ a {
   min-width: 1.4rem;
   border-radius: 999px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   text-align: center;
 }
 
 .cal-event {
   display: block;
-  padding: 0 0.2rem;
+  padding: 0 0.25rem;
   overflow: hidden;
   border-radius: 3px;
-  background: #ddf4ff;
-  color: #0550ae;
+  background: var(--event-bg);
+  color: var(--event-fg);
   font-size: 0.68rem;
-  line-height: 1.25;
+  line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.cal-event.meetup {
+  background: var(--meetup-bg);
+  color: var(--meetup-fg);
 }
 
 .cal-more {
@@ -235,12 +304,12 @@ a {
 }
 
 .event-item {
-  padding: 0.6rem 0;
+  padding: 0.7rem 0;
   border-bottom: 1px solid var(--border);
 }
 
 .event-title {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .event-meta {
@@ -271,16 +340,22 @@ a {
   text-decoration: underline;
 }
 
+.link-button:hover:not(:disabled) {
+  color: var(--fg);
+}
+
+/* ---------- 폼 ---------- */
+
 .event-form,
 .code-form {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
 
 .event-form label,
 .code-form label {
   display: grid;
-  gap: 0.25rem;
+  gap: 0.3rem;
   font-size: 0.9rem;
 }
 
@@ -288,16 +363,20 @@ a {
 .event-form input[type="date"],
 .event-form input[type="time"],
 .event-form textarea,
-.code-form input {
-  padding: 0.45rem 0.55rem;
-  border: 1px solid var(--border);
+.event-form select,
+.code-form input,
+.confirm-panel select {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
   font: inherit;
 }
 
 .event-form fieldset {
   margin: 0;
-  padding: 0.5rem 0.75rem;
+  padding: 0.55rem 0.8rem;
   border: 1px solid var(--border);
   border-radius: 6px;
 }
@@ -321,10 +400,14 @@ a {
   gap: 0.5rem;
 }
 
-.cal-event.meetup {
-  background: #dafbe1;
-  color: #116329;
+.field-error,
+.form-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.85rem;
 }
+
+/* ---------- 모임 ---------- */
 
 .tabs {
   display: flex;
@@ -334,8 +417,8 @@ a {
 
 .tabs a,
 .tabs button {
-  padding: 0.35rem 0.9rem;
-  border: 1px solid var(--border);
+  padding: 0.3rem 0.95rem;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
   color: var(--fg);
   text-decoration: none;
@@ -345,7 +428,7 @@ a {
 .tabs button[aria-pressed="true"] {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .person-chips {
@@ -363,7 +446,7 @@ a {
 .chip.selected {
   border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .slot-scroll {
@@ -399,14 +482,19 @@ a {
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--code-bg);
+  background: var(--bg-soft);
   font-size: 0.7rem;
   touch-action: manipulation;
 }
 
-.slot.on {
-  border-color: #2da44e;
-  background: #2da44e;
+.slot:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.slot.on,
+.slot.on:hover:not(:disabled) {
+  border-color: var(--ok);
+  background: var(--ok);
 }
 
 .slot:disabled {
@@ -415,21 +503,21 @@ a {
 }
 
 .slot.heat-1 {
-  background: #d2f4dc;
+  background: var(--heat-1);
 }
 
 .slot.heat-2 {
-  background: #9be9a8;
+  background: var(--heat-2);
 }
 
 .slot.heat-3 {
-  background: #40c463;
-  color: #fff;
+  background: var(--heat-3);
+  color: var(--heat-3-fg);
 }
 
 .slot.heat-4 {
-  background: #216e39;
-  color: #fff;
+  background: var(--heat-4);
+  color: var(--heat-4-fg);
 }
 
 .slot.picked {
@@ -453,13 +541,6 @@ a {
   padding: 0.15rem 0;
 }
 
-.confirm-panel select {
-  padding: 0.4rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: inherit;
-}
-
 .meetup-list {
   margin: 0 0 1rem;
   padding: 0;
@@ -467,25 +548,26 @@ a {
 }
 
 .meetup-list li {
-  padding: 0.5rem 0;
+  padding: 0.55rem 0;
   border-bottom: 1px solid var(--border);
 }
 
-.field-error,
-.form-error {
-  margin: 0;
-  color: #cf222e;
-  font-size: 0.85rem;
-}
+/* ---------- 페이지 ---------- */
 
+/* 읽기 폭 700px(Serenity의 기본 줄 길이). 양옆 여백 16px씩을 더한 값이다. */
 .page {
-  max-width: 48rem;
+  max-width: 44.5rem;
   margin: 0 auto;
-  padding: 1.25rem 16px 4rem;
+  padding: 1.75rem 16px 4rem;
 }
 
 .page-wide {
   max-width: 72rem;
+}
+
+.page > h1 {
+  margin: 0.5rem 0 1rem;
+  font-size: 1.75rem;
 }
 
 .crumb,
@@ -509,8 +591,11 @@ a {
 }
 
 .group h2 {
-  font-size: 1rem;
+  margin: 1.75rem 0 0.4rem;
   color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
   word-break: break-all;
 }
 
@@ -521,18 +606,28 @@ a {
 }
 
 .tree > li {
-  padding: 0.15rem 0;
+  padding: 0.2rem 0;
+}
+
+.tree a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.tree a:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .tree summary {
+  color: var(--muted);
   cursor: pointer;
 }
 
 .toc {
-  margin: 1rem 0;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  margin: 1.25rem 0;
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 2px solid var(--border);
   font-size: 0.9rem;
 }
 
@@ -542,8 +637,68 @@ a {
   padding: 0;
 }
 
+.toc a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.toc a:hover {
+  color: var(--accent);
+}
+
+/* ---------- 문서 본문 ---------- */
+
 .markdown {
   overflow-wrap: anywhere;
+  font-family: var(--font-prose);
+  font-size: 1.0625rem;
+  line-height: 1.8;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  margin: 2.2rem 0 0.7rem;
+  scroll-margin-top: 1rem;
+}
+
+.markdown h1 {
+  font-size: 1.75rem;
+}
+
+.markdown h2 {
+  font-size: 1.4rem;
+}
+
+.markdown h3 {
+  font-size: 1.15rem;
+}
+
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  font-size: 1rem;
+}
+
+.markdown a {
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.markdown a:hover {
+  text-decoration-color: var(--accent);
+}
+
+.markdown li {
+  margin: 0.2rem 0;
+}
+
+.markdown hr {
+  margin: 2rem 0;
+  border: 0;
+  border-top: 1px solid var(--border);
 }
 
 .markdown img {
@@ -553,29 +708,35 @@ a {
 
 .markdown pre {
   overflow-x: auto;
-  padding: 0.85rem 1rem;
+  padding: 0.9rem 1.1rem;
   border-radius: 6px;
-  background: var(--code-bg);
+  background: var(--bg-soft);
+  font-family: var(--font-code);
   font-size: 0.85rem;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .markdown code {
-  padding: 0.1rem 0.3rem;
+  padding: 0.1rem 0.32rem;
   border-radius: 4px;
-  background: var(--code-bg);
-  font-size: 0.9em;
+  background: var(--bg-soft);
+  font-family: var(--font-code);
+  font-size: 0.88em;
 }
 
 .markdown pre code {
   padding: 0;
   background: none;
+  font-size: inherit;
 }
 
 .markdown table {
   display: block;
   overflow-x: auto;
   border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .markdown th,
@@ -584,17 +745,16 @@ a {
   border: 1px solid var(--border);
 }
 
+.markdown th {
+  background: var(--bg-soft);
+  font-weight: 700;
+}
+
 .markdown blockquote {
   margin-left: 0;
   padding-left: 1rem;
-  border-left: 4px solid var(--border);
+  border-left: 3px solid var(--border-strong);
   color: var(--muted);
-}
-
-.markdown h1,
-.markdown h2,
-.markdown h3 {
-  scroll-margin-top: 1rem;
 }
 
 .wikilink-missing {
@@ -637,6 +797,7 @@ a {
 
 figcaption {
   margin-top: 0.4rem;
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
@@ -644,11 +805,37 @@ figcaption {
   margin-top: 2rem;
 }
 
+/* ---------- 버튼 ---------- */
+
 button {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
+  padding: 0.45rem 0.95rem;
+  border: 1px solid var(--border-strong);
   border-radius: 6px;
-  background: var(--code-bg);
+  background: transparent;
+  color: var(--fg);
   font: inherit;
+  font-size: 0.92rem;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+/* :where로 우선순위를 0으로 낮춰서, 색이 정해진 버튼(선택된 칩, 칸의 색 등)은 마우스를 올려도 색이 그대로다. */
+button:where(:hover:not(:disabled)) {
+  background: var(--bg-soft);
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* 폼을 보내는 버튼(만들기, 확인, 저장, 확정)이 이 화면의 주된 동작이다. */
+button[type="submit"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+button[type="submit"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 88%, black);
 }
