@@ -1,6 +1,6 @@
 import type { Db } from "@/lib/db/types";
 import { json, readJsonBody } from "@/lib/http";
-import { checkLock, clearFailures, recordFailure } from "./attempts";
+import { MAX_FAILURES, clearFailures, recordAttempt } from "./attempts";
 import { loadAuthConfig } from "./config";
 import { clientIp, hashIp } from "./ip";
 import { safeEqual } from "./safe-equal";
@@ -62,13 +62,14 @@ export function createAuthHandlers(deps: AuthDeps) {
       const code = (parsed.body as { code?: unknown } | null)?.code;
 
       try {
-        const before = await checkLock(db, ipHash, now);
-        if (before.locked) return locked(before.retryAfterMinutes);
+        // 시도를 먼저 세고, 번호가 5 이하일 때만 코드를 평가한다(동시에 몰려 와도 평가는 5번을 넘지 않는다).
+        const attempt = await recordAttempt(db, ipHash, now);
+        if (attempt.count > MAX_FAILURES) return locked(attempt.retryAfterMinutes);
 
         const correct = typeof code === "string" && code.length <= MAX_CODE_LENGTH && safeEqual(code, auth.config.editCode);
         if (!correct) {
-          const after = await recordFailure(db, ipHash, now);
-          return after.locked ? locked(after.retryAfterMinutes) : json({ error: "코드가 맞지 않아요." }, 401);
+          // 5번째 시도가 틀렸으면 바로 잠겼다고 알린다.
+          return attempt.count >= MAX_FAILURES ? locked(attempt.retryAfterMinutes) : json({ error: "코드가 맞지 않아요." }, 401);
         }
         await clearFailures(db, ipHash);
       } catch (error) {

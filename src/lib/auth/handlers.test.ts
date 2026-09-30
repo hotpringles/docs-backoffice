@@ -1,7 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb } from "@/lib/db/testing";
 import type { Db } from "@/lib/db/types";
+import { MAX_FAILURES } from "./attempts";
 import { createAuthHandlers, requireEditSession, type AuthDeps } from "./handlers";
+
+// 편집 코드를 "실제로 비교한" 횟수를 센다. 상태 코드만 보면, 평가된 뒤 잠금 때문에 429로 바뀐 응답과
+// 평가되지 않고 거절된 응답을 구별할 수 없다. (로그인 한 번에 비교는 최대 한 번이다.)
+const comparisons = vi.hoisted(() => ({ count: 0 }));
+vi.mock("./safe-equal", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./safe-equal")>();
+  return {
+    ...actual,
+    safeEqual: (a: string, b: string) => {
+      comparisons.count += 1;
+      return actual.safeEqual(a, b);
+    },
+  };
+});
 import { SESSION_COOKIE, SESSION_TTL_SECONDS, createSessionToken, readCookie, verifySessionToken } from "./session";
 
 const CODE = "correct-horse-battery";
@@ -78,6 +93,18 @@ describe("login", () => {
 
     clock = new Date(clock.getTime() + 10 * 60_000);
     expect((await handlers.login(loginRequest(CODE))).status).toBe(200);
+  });
+
+  it("동시에 몰려 들어와도 코드를 평가하는 횟수는 5번을 넘지 않는다(올바른 코드가 뒤에 섞여 있어도 잠금을 뚫지 못한다)", async () => {
+    const handlers = createAuthHandlers(deps());
+    comparisons.count = 0;
+    const burst = Array.from({ length: 30 }, (_, i) => handlers.login(loginRequest(i === 29 ? CODE : `wrong-${i}`)));
+    const statuses = (await Promise.all(burst)).map((response) => response.status);
+
+    expect(comparisons.count).toBeLessThanOrEqual(MAX_FAILURES);
+    expect(statuses.filter((status) => status === 429).length).toBeGreaterThanOrEqual(30 - MAX_FAILURES);
+    // 뒤늦게 섞인 올바른 코드는 평가조차 되지 못하고 거절된다.
+    expect(statuses[29]).toBe(429);
   });
 
   it("다른 IP는 잠기지 않는다", async () => {
