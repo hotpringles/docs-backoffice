@@ -666,6 +666,13 @@ body:has(.cal-page) {
   text-decoration: none;
 }
 
+/* 문서 종류 탭의 문서 수 */
+.tab-count {
+  margin-left: 0.15rem;
+  opacity: 0.6;
+  font-size: 0.8rem;
+}
+
 .tabs a[aria-current="page"],
 .tabs button[aria-pressed="true"] {
   border-color: var(--accent);

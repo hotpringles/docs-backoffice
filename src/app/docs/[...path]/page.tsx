@@ -7,6 +7,7 @@ import { StaleBanner } from "@/components/StaleBanner";
 import { Toc } from "@/components/Toc";
 import { loadConfig } from "@/lib/config";
 import { loadDocPage } from "@/lib/docs";
+import { areaOfPath, docAreas } from "@/lib/github/areas";
 import { pathFromSegments } from "@/lib/github/tree";
 import { blobUrl } from "@/lib/transform/repo-urls";
 
@@ -29,12 +30,16 @@ export default async function DocPage({ params }: Props) {
 
   const config = loadConfig();
   const repo = { ...config.repo, branch: config.branch };
+  // 문서 종류(Frontend, Backend, AI)가 나뉘어 있으면 "문서 목록"은 이 문서가 속한 종류의 목록으로 돌아간다.
+  const areas = docAreas(config.docsPaths);
+  const area = areas.length >= 2 ? areaOfPath(areas, page.path) : undefined;
+  const listHref = area ? `/?area=${area.key}` : "/";
 
   if (page.kind === "drawing") {
     return (
       <main className="page page-wide">
         <p className="crumb">
-          <Link href="/">← 문서 목록</Link>
+          <Link href={listHref}>← 문서 목록</Link>
         </p>
         <h1>{page.title}</h1>
         {page.stale && <StaleBanner />}
@@ -63,7 +68,7 @@ export default async function DocPage({ params }: Props) {
         </aside>
         <div className="doc-main">
           <p className="crumb">
-            <Link href="/">← 문서 목록</Link>
+            <Link href={listHref}>← 문서 목록</Link>
           </p>
           {!doc.hasH1 && <h1>{page.title}</h1>}
           {(doc.frontmatter.date || doc.frontmatter.tags.length > 0) && (
