@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type PointerEvent } from "react";
 import { shortDayLabel } from "@/lib/calendar/view";
 import { saveAvailability } from "@/lib/meetups/client";
+import { DayHead } from "./DayHead";
 import { cellKey } from "@/lib/meetups/slots";
 import { createTouchPainter } from "@/lib/meetups/touchPaint";
 import { paintKeys, sameKeys, slotLabels, sortedKeys, toggleColumn } from "@/lib/meetups/view";
@@ -236,8 +237,8 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
               <th aria-hidden="true" />
               {dates.map((day) => (
                 <th key={day} scope="col">
-                  <button type="button" className="link-button" disabled={!editable} onClick={() => toggleDay(day)}>
-                    {shortDayLabel(day)}
+                  <button type="button" className="day-toggle" disabled={!editable} onClick={() => toggleDay(day)} title="누르면 그 날 전체를 켜고 꺼요">
+                    <DayHead day={day} />
                   </button>
                 </th>
               ))}

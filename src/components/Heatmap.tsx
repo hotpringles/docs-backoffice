@@ -6,6 +6,7 @@ import type { CellSummary } from "@/lib/meetups/overlap";
 import { cellKey } from "@/lib/meetups/slots";
 import { heatLevel, slotLabels } from "@/lib/meetups/view";
 import { nameOf, type Person } from "@/lib/people";
+import { DayHead } from "./DayHead";
 
 type Props = {
   dates: string[];
@@ -32,7 +33,7 @@ export function Heatmap({ dates, dayStart, slotCount, slotMinutes, cells, total,
               <th aria-hidden="true" />
               {dates.map((day) => (
                 <th key={day} scope="col">
-                  {shortDayLabel(day)}
+                  <DayHead day={day} />
                 </th>
               ))}
             </tr>

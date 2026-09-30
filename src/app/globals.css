@@ -589,6 +589,36 @@ body:has(.cal-page) {
 
 /* ---------- 모임 ---------- */
 
+/* 달력과 같이 가장자리에서 떨어지게, 표가 너무 퍼지지 않게 폭은 60rem까지. */
+.page.meetup-page {
+  max-width: 60rem;
+  padding: 1.5rem clamp(16px, 3vw, 48px) 4rem;
+}
+
+.meetup-page .crumb-back {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* 새 모임 폼: 짝이 되는 칸(시작~끝 날짜, 하루 시작~끝 시각)을 한 줄에 둔다. */
+.meetup-form {
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 479px) {
+  .field-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .tabs {
   display: flex;
   gap: 0.5rem;
@@ -629,26 +659,95 @@ body:has(.cal-page) {
   color: var(--on-accent);
 }
 
+/*
+ * 칠하기 표. 날짜 열이 폭을 똑같이 나눠 가져서(최대 8일이라 폰에서도 옆으로 밀 필요가 없다) 가로 스크롤을 두지 않는다.
+ * 그래서 날짜 머리글을 화면 위에 붙여(sticky) 아래로 스크롤해도 어느 날짜 열인지 보인다.
+ */
 .slot-scroll {
   margin: 0.75rem 0;
-  overflow-x: auto;
 }
 
 .slot-grid {
+  width: 100%;
+  table-layout: fixed;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
   border-collapse: separate;
-  border-spacing: 2px;
+  border-spacing: 0;
   user-select: none;
   /* 폰에서 칸을 꾹 눌러도 글자 선택·확대 표시·복사 메뉴가 뜨지 않게 한다(꾹 누르기가 칠하기의 시작이다). */
   -webkit-user-select: none;
   -webkit-touch-callout: none;
 }
 
-.slot-grid th {
-  padding: 0 0.3rem;
+.slot-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--bg-head);
+  color: var(--fg);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.slot-grid thead th:first-child {
+  width: 3.6rem;
+  border-top-left-radius: 9px;
+}
+
+.slot-grid thead th:last-child {
+  border-top-right-radius: 9px;
+}
+
+.dh-date,
+.dh-wd {
+  display: block;
+}
+
+.dh-wd {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+/* 날짜 머리글을 누르면 그 날 전체를 켜고 끈다. 평소에는 글자처럼 보이고 올리면 눌러도 되는 곳이라는 게 드러난다. */
+.day-toggle {
+  display: block;
+  width: 100%;
+  padding: 0.15rem 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: center;
+}
+
+.day-toggle:hover:not(:disabled) {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.day-toggle:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.slot-grid tbody th {
+  padding: 0 0.4rem 0 0;
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.slot-grid td {
+  padding: 2px;
 }
 
 .slot-time {
@@ -657,8 +756,8 @@ body:has(.cal-page) {
 
 .slot {
   display: block;
-  width: 2.6rem;
-  height: 1.6rem;
+  width: 100%;
+  height: 1.75rem;
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -1028,4 +1127,16 @@ button[type="submit"] {
 
 button[type="submit"]:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 88%, black);
+}
+
+/* 내 시간 화면의 저장 줄: 표가 길어도 저장 버튼이 화면 아래에 늘 보이게 붙인다. */
+.availability .editor-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
 }

@@ -57,7 +57,7 @@ export default async function MeetupPage({ params, searchParams }: Props) {
     return (
       <main className="page">
         <p>
-          <Link href="/meetups">‹ 모임 목록</Link>
+          <Link href="/meetups" className="crumb-back">‹ 모임 목록</Link>
         </p>
         <p className="banner">{problem}</p>
       </main>
@@ -80,9 +80,9 @@ export default async function MeetupPage({ params, searchParams }: Props) {
   const canEdit = await hasEditSession();
 
   return (
-    <main className="page page-wide">
+    <main className="page meetup-page">
       <p>
-        <Link href="/meetups">‹ 모임 목록</Link>
+        <Link href="/meetups" className="crumb-back">‹ 모임 목록</Link>
       </p>
       <h1>{meetup.title}</h1>
       <p className="meta">
