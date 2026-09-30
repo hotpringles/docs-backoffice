@@ -17,10 +17,19 @@ describe("docAreas", () => {
     ]);
   });
 
+  it("저장소 맨 위의 docs 폴더는 '공통 문서'로 보여 주고, 종류 뒤에 두면 마지막 탭이 된다", () => {
+    expect(docAreas(["frontend/docs", "backend/docs", "ai/docs", "docs"])).toEqual([
+      { key: "frontend", label: "Frontend", roots: ["frontend/docs"] },
+      { key: "backend", label: "Backend", roots: ["backend/docs"] },
+      { key: "ai", label: "AI", roots: ["ai/docs"] },
+      { key: "docs", label: "공통 문서", roots: ["docs"] },
+    ]);
+  });
+
   it("모르는 첫 폴더는 그 이름을 그대로 보여 준다", () => {
-    expect(docAreas(["docs", "design/specs"])).toEqual([
-      { key: "docs", label: "docs", roots: ["docs"] },
+    expect(docAreas(["design/specs", "wiki"])).toEqual([
       { key: "design", label: "design", roots: ["design/specs"] },
+      { key: "wiki", label: "wiki", roots: ["wiki"] },
     ]);
   });
 
@@ -52,6 +61,13 @@ describe("areaOfPath", () => {
     expect(areaOfPath(areas, "frontend/docs/plan/m0.md")?.key).toBe("frontend");
     expect(areaOfPath(areas, "backend/README.md")?.key).toBe("backend");
     expect(areaOfPath(areas, "ai/decision_log/2026-09-01.md")?.key).toBe("ai");
+  });
+
+  it("공통 문서(docs/) 아래의 문서는 공통 문서 종류에 속한다. frontend/docs와는 섞이지 않는다", () => {
+    const withCommon = docAreas(["frontend/docs", "docs"]);
+    expect(areaOfPath(withCommon, "docs/README.md")?.key).toBe("docs");
+    expect(areaOfPath(withCommon, "frontend/docs/plan/m0.md")?.key).toBe("frontend");
+    expect(areaOfPath(withCommon, "docs-old/a.md")).toBeUndefined();
   });
 
   it("어느 문서 폴더에도 없으면 undefined다(폴더 경계까지 맞아야 한다)", () => {

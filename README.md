@@ -22,7 +22,7 @@ npm run dev
 |---|---|
 | `GITHUB_REPO` | 문서를 읽어올 저장소 (`소유자/이름`) |
 | `GITHUB_BRANCH` | 표시할 브랜치. 비우면 `develop` |
-| `DOCS_PATHS` | 표시할 문서 폴더 목록, 쉼표로 구분, 하위 폴더 포함. 비우면 저장소 전체. 첫 폴더 이름이 `frontend`, `backend`, `ai`처럼 둘 이상이면 문서 화면에 **Frontend / Backend / AI 탭**이 생기고 고른 종류의 문서만 보여 줍니다(예: `frontend/docs,backend/docs,ai/docs`, 각 탭에 문서 수 표시. 아직 문서가 없는 폴더의 탭은 문서 수 0으로 나옵니다). 하나뿐이면 탭 없이 전부 보여 줍니다 |
+| `DOCS_PATHS` | 표시할 문서 폴더 목록, 쉼표로 구분, 하위 폴더 포함. 비우면 저장소 전체. 첫 폴더 이름이 `frontend`, `backend`, `ai`처럼 둘 이상이면 문서 화면에 **Frontend / Backend / AI 탭**이 생기고 고른 종류의 문서만 보여 줍니다(예: `frontend/docs,backend/docs,ai/docs,docs`, 각 탭에 문서 수 표시. 저장소 맨 위의 `docs` 폴더는 **공통 문서** 탭이 되고, 탭 순서는 `DOCS_PATHS`에 적은 순서입니다. 아직 문서가 없는 폴더의 탭은 문서 수 0으로 나옵니다). 하나뿐이면 탭 없이 전부 보여 줍니다 |
 | `GITHUB_TOKEN` | 읽기 전용 토큰. 없어도 되지만 GitHub API가 시간당 60회로 제한된다(토큰이 있으면 5,000회) |
 | `GITHUB_WEBHOOK_SECRET` | webhook 서명 비밀키. 저장소 webhook 설정에 넣은 값과 같아야 한다 |
 | `DATABASE_URL` | Neon Postgres 연결 문자열 (푸시 알림) |

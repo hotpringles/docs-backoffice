@@ -2,7 +2,8 @@
 export type DocArea = { key: string; label: string; roots: string[] };
 
 // 첫 폴더 이름 → 화면에 보일 이름. 여기에 없는 폴더는 이름을 그대로 보여 준다.
-const LABELS: Record<string, string> = { frontend: "Frontend", backend: "Backend", ai: "AI" };
+// 저장소 맨 위의 docs 폴더는 특정 종류에 속하지 않는 팀 공통 문서다.
+const LABELS: Record<string, string> = { frontend: "Frontend", backend: "Backend", ai: "AI", docs: "공통 문서" };
 
 /**
  * `DOCS_PATHS`의 문서 폴더를 첫 폴더 이름으로 묶는다(예: `ai/docs`와 `ai/decision_log`는 AI 하나).
