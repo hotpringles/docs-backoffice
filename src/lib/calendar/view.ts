@@ -24,6 +24,11 @@ export function dayLabel(date: string): string {
   return `${Number(date.slice(5, 7))}월 ${Number(date.slice(8, 10))}일 (${WEEKDAY_LABELS[weekday(date)]})`;
 }
 
+/** "10/7(수)" — 알림처럼 좁은 곳에 쓰는 짧은 날짜. */
+export function shortDayLabel(date: string): string {
+  return `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}(${WEEKDAY_LABELS[weekday(date)]})`;
+}
+
 const REMIND_LABELS: Record<number, string> = { 0: "당일", 1: "1일 전", 3: "3일 전" };
 
 export function remindLabel(offsets: number[]): string {
