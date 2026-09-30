@@ -5,6 +5,7 @@
 :root {
   --bg: #fcfcfa; /* 종이 */
   --bg-soft: #f3f2ee; /* 코드, 비활성 칸, 마우스를 올렸을 때 */
+  --bg-head: #ebe9e2; /* 달력의 요일 머리글 */
   --fg: #2a2a28;
   --muted: #6f6e69;
   --border: #e4e2dc;
@@ -179,14 +180,14 @@ body:has(.cal-page) {
   overflow: hidden;
 }
 
+/* 달력이 화면 가장자리에 붙지 않도록 넓은 화면일수록 바깥 여백을 더 준다(폰은 16px). */
 .page.cal-page {
   max-width: none;
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding-top: 0.9rem;
-  padding-bottom: 12px;
+  padding: 1.25rem clamp(16px, 3vw, 48px) clamp(16px, 3vh, 32px);
 }
 
 .cal-nav {
@@ -228,8 +229,8 @@ body:has(.cal-page) {
   display: grid;
   grid-template-rows: auto repeat(var(--weeks), minmax(3.5rem, 1fr));
   overflow-y: auto;
-  border-top: 1px solid var(--border);
-  border-left: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
 }
 
 .cal-row {
@@ -238,11 +239,18 @@ body:has(.cal-page) {
   min-height: 0;
 }
 
+/* 요일 머리글은 날짜 칸과 다른 바탕색으로 구분한다. */
+.cal-head {
+  background: var(--bg-head);
+  border-bottom: 1px solid var(--border-strong);
+}
+
 .cal-head > div {
-  padding: 0.3rem 0;
-  color: var(--muted);
+  padding: 0.45rem 0;
+  color: var(--fg);
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-align: center;
 }
 
@@ -259,6 +267,15 @@ body:has(.cal-page) {
   min-height: 0;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
+}
+
+/* 바깥 테두리와 겹치지 않게 맨 오른쪽 열과 맨 아랫줄의 안쪽 선은 뺀다. */
+.cal-td:last-child {
+  border-right: 0;
+}
+
+.cal-row:last-child .cal-td {
+  border-bottom: 0;
 }
 
 .cal-cell {
