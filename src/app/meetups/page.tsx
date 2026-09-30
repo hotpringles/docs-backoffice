@@ -17,7 +17,7 @@ function MeetupList({ meetups, empty }: { meetups: MeetupRecord[]; empty: string
       {meetups.map((meetup) => (
         <li key={meetup.id}>
           <Link href={`/meetups/${meetup.id}`}>{meetup.title}</Link>
-          <span className="meta"> · {meetupRangeLabel(meetup.dates)}</span>
+          <span className="meta">{meetupRangeLabel(meetup.dates)}</span>
         </li>
       ))}
     </ul>

@@ -655,6 +655,7 @@ body:has(.cal-page) {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin: 1rem 0;
 }
@@ -662,6 +663,7 @@ body:has(.cal-page) {
 .tabs a,
 .tabs button {
   padding: 0.3rem 0.95rem;
+  white-space: nowrap;
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   color: var(--fg);
@@ -871,15 +873,38 @@ body:has(.cal-page) {
   padding: 0.15rem 0;
 }
 
+/*
+ * 목록 화면(문서 목록, 모임 목록): 짧은 글이 가운데 컨테이너의 왼쪽에만 몰려 화면이 왼쪽으로 치우쳐 보이지 않도록,
+ * 목록을 컨테이너 폭을 가득 채우는 둥근 틀에 줄로 나누어 담는다. 모임 목록은 날짜를 오른쪽 끝에 둔다.
+ */
 .meetup-list {
   margin: 0 0 1rem;
   padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
   list-style: none;
 }
 
 .meetup-list li {
-  padding: 0.55rem 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.7rem 1rem;
   border-bottom: 1px solid var(--border);
+}
+
+.meetup-list li:last-child {
+  border-bottom: 0;
+}
+
+.meetup-list li:hover {
+  background: var(--bg-soft);
+}
+
+.meetup-list .meta {
+  flex-shrink: 0;
 }
 
 /* ---------- 페이지 ---------- */
@@ -938,6 +963,36 @@ body:has(.cal-page) {
 
 .tree > li {
   padding: 0.2rem 0;
+}
+
+/* 문서 목록의 바깥 틀: 맨 위 항목마다 줄을 긋고, 폴더 안쪽은 들여쓴 채 줄 없이 둔다. */
+.group > .tree {
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+}
+
+.group > .tree > li {
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.group > .tree > li:last-child {
+  border-bottom: 0;
+}
+
+.group > .tree > li:hover {
+  background: var(--bg-soft);
+}
+
+.group > .tree > li > a {
+  display: block;
+}
+
+.group > .tree > li > details > .tree {
+  margin-top: 0.4rem;
+  padding-left: 0.5rem;
 }
 
 .tree a {
