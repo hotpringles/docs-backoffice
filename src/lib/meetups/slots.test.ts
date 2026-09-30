@@ -5,6 +5,7 @@ import {
   boundaryOf,
   cellKey,
   datesInRange,
+  defaultMeetupDates,
   meetupDateWindow,
   minutesOf,
   parseCellKey,
@@ -98,5 +99,19 @@ describe("meetupDateWindow", () => {
   it("달과 해를 넘겨도 맞다", () => {
     expect(meetupDateWindow("2026-12-28")).toEqual({ min: "2026-12-28", max: "2027-01-04" });
     expect(meetupDateWindow("2026-02-25")).toEqual({ min: "2026-02-25", max: "2026-03-04" });
+  });
+});
+
+describe("defaultMeetupDates", () => {
+  it("새 모임 폼의 처음 값: 시작은 오늘, 끝은 고를 수 있는 마지막 날(오늘로부터 일주일 뒤)이다", () => {
+    expect(defaultMeetupDates("2026-09-30")).toEqual({ startDate: "2026-09-30", endDate: "2026-10-07" });
+    expect(defaultMeetupDates("2026-12-28")).toEqual({ startDate: "2026-12-28", endDate: "2027-01-04" });
+  });
+
+  it("처음 값은 서버가 받아 주는 범위 안이다(그대로 만들어도 거절되지 않는다)", () => {
+    const { startDate, endDate } = defaultMeetupDates("2026-10-07");
+    const { min, max } = meetupDateWindow("2026-10-07");
+    expect(startDate >= min && endDate <= max).toBe(true);
+    expect(datesInRange(startDate, endDate)).toHaveLength(8);
   });
 });

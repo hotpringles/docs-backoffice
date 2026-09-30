@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import { MAX_TITLE_LENGTH } from "@/lib/events/validate";
 import { shortDayLabel } from "@/lib/calendar/view";
 import { createMeetup } from "@/lib/meetups/client";
-import { meetupDateWindow } from "@/lib/meetups/slots";
+import { defaultMeetupDates, meetupDateWindow } from "@/lib/meetups/slots";
 import { CodeForm } from "./CodeForm";
 import { useEditGate } from "./useEditGate";
 
@@ -19,7 +19,7 @@ const browserFetch: typeof fetch = (input, init) => fetch(input, init);
 export function MeetupCreator({ canEdit, today }: { canEdit: boolean; today: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState<Form>({ title: "", startDate: today, endDate: today, dayStart: "09:00", dayEnd: "22:00" });
+  const [form, setForm] = useState<Form>({ title: "", ...defaultMeetupDates(today), dayStart: "09:00", dayEnd: "22:00" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});

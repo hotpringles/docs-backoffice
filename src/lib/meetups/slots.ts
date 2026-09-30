@@ -56,6 +56,12 @@ export function meetupDateWindow(today: string): { min: string; max: string } {
   return { min: today, max: addDays(today, MAX_AHEAD_DAYS) };
 }
 
+/** 새 모임 폼의 처음 후보 날짜: 시작은 오늘, 끝은 고를 수 있는 마지막 날(오늘로부터 일주일 뒤)이다. */
+export function defaultMeetupDates(today: string): { startDate: string; endDate: string } {
+  const { min, max } = meetupDateWindow(today);
+  return { startDate: min, endDate: max };
+}
+
 const CELL_KEY = /^(\d{4}-\d{2}-\d{2}):(\d{1,3})$/;
 
 /** 날짜와 칸 번호를 하나의 키로("2026-10-07:4"). 화면과 서버가 같은 모양을 쓴다. */
