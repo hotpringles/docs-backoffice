@@ -80,9 +80,20 @@ export async function updateEvent(db: Db, id: number, input: EventInput): Promis
   return rows.length > 0;
 }
 
-/** 일정을 지운다(알림 기록은 함께 지워진다). 없는 일정이면 false. */
+/**
+ * 일정을 지운다(알림 기록은 함께 지워진다). 없는 일정이면 false.
+ * 모임을 확정해서 만든 일정이면, 같은 문장 안에서 그 모임을 다시 '열림'으로 돌린다. 그러지 않으면 달력에 일정이 없는데 모임만
+ * '확정됨'으로 남아서, 바꿀 수도 다시 확정할 수도 없는 상태가 된다.
+ */
 export async function deleteEvent(db: Db, id: number): Promise<boolean> {
-  const rows = await db.query<{ id: number }>("delete from events where id = $1 returning id", [id]);
+  const rows = await db.query<{ id: number }>(
+    `with d as (delete from events where id = $1 returning id, meetup_id),
+          r as (update meetups set status = 'open', confirmed_at = null
+                 where status = 'confirmed' and id in (select meetup_id from d where meetup_id is not null)
+                 returning id)
+     select id from d`,
+    [id],
+  );
   return rows.length > 0;
 }
 

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SESSION_COOKIE, createSessionToken } from "@/lib/auth/session";
 import { createTestDb } from "@/lib/db/testing";
 import type { Db } from "@/lib/db/types";
+import { confirmMeetup, createMeetup, getMeetup, getMeetupEventId } from "@/lib/meetups/store";
 import { createEventHandlers, type EventDeps } from "./handlers";
 import { createEvent, getEvent, listEventsInRange } from "./store";
 import type { EventInput } from "./validate";
@@ -160,6 +161,36 @@ describe("remove", () => {
     expect((await handlers.remove(post({}), String(id))).status).toBe(200);
     expect(await getEvent(db, id)).toBeNull();
     expect((await handlers.remove(post({}), String(id))).status).toBe(404);
+  });
+
+  describe("모임을 확정해서 만든 일정", () => {
+    const roster = [{ id: "p1", name: "민수" }];
+    const span = { day: "2026-10-07", startSlot: 2, endSlot: 4, startTime: "10:00", endTime: "11:00", remindOffsets: [0] };
+    const meetupInput = { title: "스터디", dates: ["2026-10-07"], dayStart: "09:00", dayEnd: "13:00" };
+
+    it("지우면 모임이 다시 열려서(확정 전으로) 새로 확정할 수 있다. 일정이 없는 '확정된 모임'으로 남지 않는다", async () => {
+      const meetupId = await createMeetup(db, meetupInput);
+      const eventId = (await confirmMeetup(db, meetupId, span, roster)) as number;
+      expect((await getMeetup(db, meetupId))?.status).toBe("confirmed");
+
+      expect((await createEventHandlers(deps()).remove(post({}), String(eventId))).status).toBe(200);
+
+      expect(await getEvent(db, eventId)).toBeNull();
+      expect((await getMeetup(db, meetupId))?.status).toBe("open");
+      expect(await getMeetupEventId(db, meetupId)).toBeNull();
+      expect(await confirmMeetup(db, meetupId, span, roster)).not.toBeNull();
+    });
+
+    it("다른 일정을 지워도 모임은 확정된 채로 그대로다", async () => {
+      const meetupId = await createMeetup(db, meetupInput);
+      const eventId = (await confirmMeetup(db, meetupId, span, roster)) as number;
+      const other = await createEvent(db, stored);
+
+      expect((await createEventHandlers(deps()).remove(post({}), String(other))).status).toBe(200);
+
+      expect((await getMeetup(db, meetupId))?.status).toBe("confirmed");
+      expect(await getEvent(db, eventId)).not.toBeNull();
+    });
   });
 
   it("편집 권한이 없으면 401이고 일정은 그대로다", async () => {
