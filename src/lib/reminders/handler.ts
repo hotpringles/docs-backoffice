@@ -29,7 +29,13 @@ export function createReminderHandler({ env, loadDeps, now }: ReminderHandlerDep
     }
 
     try {
-      return json(await runReminders(pushDeps.deps, now()));
+      const result = await runReminders(pushDeps.deps, now());
+      // 아무에게도 보내지 못했으면(기록은 이미 풀려서 다시 호출하면 재시도된다) 오류로 응답한다.
+      // Vercel은 cron을 다시 시도하지 않고 대시보드에 응답 코드만 보여주므로, 200이면 실패가 묻힌다.
+      if (result.released) {
+        return json({ error: "일정 알림을 아무에게도 보내지 못했어요. 다시 호출하면 재시도해요.", ...result }, 502);
+      }
+      return json(result);
     } catch (error) {
       console.error("일정 알림을 보내지 못했어요", error);
       return json({ error: "일정 알림을 보내지 못했어요." }, 500);

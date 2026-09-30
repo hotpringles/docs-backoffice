@@ -95,6 +95,27 @@ describe("GET /api/cron/reminders", () => {
     expect(sender).toHaveBeenCalledTimes(1);
   });
 
+  // Vercel은 cron이 실패해도 다시 시도하지 않고, 대시보드에는 응답 코드만 보인다. 200으로 응답하면 알림이 한 명에게도
+  // 가지 않았는데 성공으로 보이므로, 아무에게도 못 보낸 실행은 오류 상태로 알려서 눈에 띄게 한다.
+  it("구독자가 있는데 아무에게도 보내지 못했으면 502로 알려서 대시보드에서 실패로 보이게 한다(기록은 풀려서 다시 호출하면 재시도된다)", async () => {
+    await seedEvent();
+    await saveSubscription(db, { endpoint: "https://fcm.googleapis.com/fcm/send/d1", p256dh: "B".repeat(87), auth: "a".repeat(22) });
+    const broken: Sender = async () => {
+      throw new Error("bad vapid key");
+    };
+    const { get } = handler(broken);
+
+    const first = await get(request(`Bearer ${SECRET}`));
+    expect(first.status).toBe(502);
+    expect(await first.json()).toMatchObject({ released: true, claimed: 1, summary: { total: 1, sent: 0, failed: 1 } });
+
+    const working = vi.fn<Sender>(async () => undefined);
+    const retry = await handler(working).get(request(`Bearer ${SECRET}`));
+    expect(retry.status).toBe(200);
+    expect((await retry.json()).claimed).toBe(1);
+    expect(working).toHaveBeenCalledTimes(1);
+  });
+
   it("푸시 설정이 부족하면 503과 무엇이 없는지 알려준다", async () => {
     const sender = vi.fn<Sender>(async () => undefined);
     const { get } = handler(sender, { loadDeps: () => ({ ok: false, missing: ["DATABASE_URL", "VAPID_PRIVATE_KEY"] }) });
