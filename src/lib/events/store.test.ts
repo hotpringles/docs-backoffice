@@ -43,12 +43,12 @@ describe("createEvent / getEvent", () => {
       remindOffsets: [0, 3],
     };
     const id = await createEvent(db, input);
-    expect(await getEvent(db, id)).toEqual({ id, ...input });
+    expect(await getEvent(db, id)).toEqual({ id, meetupId: null, ...input });
   });
 
   it("종일 일정과 빈 메모, 빈 목록은 null과 빈 배열로 읽는다", async () => {
     const id = await createEvent(db, { ...base, remindOffsets: [] });
-    expect(await getEvent(db, id)).toEqual({ id, ...base, remindOffsets: [] });
+    expect(await getEvent(db, id)).toEqual({ id, meetupId: null, ...base, remindOffsets: [] });
   });
 
   it("번호가 계속 늘어나고, 참석자 값에 공백·따옴표·쉼표가 있어도 그대로 저장된다", async () => {
@@ -95,7 +95,7 @@ describe("updateEvent", () => {
     const id = await createEvent(db, base);
     const changed: EventInput = { ...base, title: "바뀐 제목", startTime: "10:00", endTime: "11:00", memo: "메모", attendeeIds: ["p2"] };
     expect(await updateEvent(db, id, changed)).toBe(true);
-    expect(await getEvent(db, id)).toEqual({ id, ...changed });
+    expect(await getEvent(db, id)).toEqual({ id, meetupId: null, ...changed });
     expect(await updateEvent(db, 999, changed)).toBe(false);
   });
 

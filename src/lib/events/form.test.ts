@@ -27,6 +27,7 @@ describe("emptyForm", () => {
 describe("formFromEvent / formToPayload", () => {
   const timed: EventRecord = {
     id: 5,
+    meetupId: null,
     title: "스터디",
     date: "2026-10-07",
     startTime: "14:00",

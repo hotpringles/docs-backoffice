@@ -50,6 +50,7 @@ describe("create", () => {
     const { id } = await response.json();
     expect(await getEvent(db, id)).toEqual({
       id,
+      meetupId: null,
       title: "스터디",
       date: "2026-10-08",
       startTime: "14:00",

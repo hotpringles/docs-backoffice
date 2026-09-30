@@ -5,6 +5,7 @@ import { dayLabel, formatTimeRange, groupByDate, pickSelectedDate, remindLabel, 
 
 const event = (id: number, date: string, overrides: Partial<EventRecord> = {}): EventRecord => ({
   id,
+  meetupId: null,
   title: `일정 ${id}`,
   date,
   startTime: null,

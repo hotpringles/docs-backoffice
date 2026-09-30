@@ -1,7 +1,8 @@
 import type { Db } from "@/lib/db/types";
 import type { EventInput } from "./validate";
 
-export type EventRecord = EventInput & { id: number };
+/** `meetupId`는 모임을 확정해서 만들어진 일정일 때만 값이 있다. */
+export type EventRecord = EventInput & { id: number; meetupId: number | null };
 
 type EventRow = {
   id: number;
@@ -12,6 +13,7 @@ type EventRow = {
   memo: string | null;
   attendee_ids: string[];
   remind_offsets: number[];
+  meetup_id: number | null;
 };
 
 // 드라이버마다 date, time을 다른 타입(Date 등)으로 읽으므로, SQL에서 문자열로 바꿔서 받는다.
@@ -20,7 +22,7 @@ const SELECT_EVENT = `
          to_char(event_date, 'YYYY-MM-DD') as date,
          to_char(start_time, 'HH24:MI') as start_time,
          to_char(end_time, 'HH24:MI') as end_time,
-         memo, attendee_ids, remind_offsets
+         memo, attendee_ids, remind_offsets, meetup_id
   from events`;
 
 function toRecord(row: EventRow): EventRecord {
@@ -33,6 +35,7 @@ function toRecord(row: EventRow): EventRecord {
     memo: row.memo,
     attendeeIds: row.attendee_ids,
     remindOffsets: row.remind_offsets,
+    meetupId: row.meetup_id,
   };
 }
 
