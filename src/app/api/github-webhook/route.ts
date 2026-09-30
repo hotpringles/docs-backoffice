@@ -1,6 +1,9 @@
 import { revalidateTag } from "next/cache";
+import { after } from "next/server";
 import { loadConfig, type AppConfig } from "@/lib/config";
 import { TREE_TAG } from "@/lib/github/tags";
+import { loadPushDeps } from "@/lib/push/deps";
+import { notifyDocsChangedIfConfigured } from "@/lib/push/notify-docs";
 import { decideWebhook } from "@/lib/webhook/decide";
 import { verifySignature } from "@/lib/webhook/verify";
 
@@ -40,6 +43,11 @@ export async function POST(request: Request): Promise<Response> {
     case "push":
       // 외부 서비스가 부르는 경로라 updateTag는 쓸 수 없다. { expire: 0 }으로 즉시 만료시킨다.
       revalidateTag(TREE_TAG, { expire: 0 });
+      if (decision.changedDocs.length > 0) {
+        // GitHub은 10초 안에 응답하지 않으면 실패로 기록하므로, 응답을 먼저 돌려주고 알림은 그 뒤에 보낸다.
+        // 캐시 무효화는 이미 끝났으니 알림이 실패해도 화면 반영에는 영향이 없다.
+        after(() => notifyDocsChangedIfConfigured(() => loadPushDeps(), { commitSha: decision.commitSha, changedDocs: decision.changedDocs }));
+      }
       return json({ revalidated: true, changedDocs: decision.changedDocs.length }, 200);
   }
 }

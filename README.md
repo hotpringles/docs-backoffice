@@ -61,6 +61,8 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 - Secret: `GITHUB_WEBHOOK_SECRET`과 같은 값
 - Events: Just the push event
 
+`develop`에 푸시가 올라오면 문서 목록·본문 캐시를 바로 갱신하고, 표시 대상 문서(`DOCS_PATHS` 아래의 `.md`)가 바뀌었으면 구독한 기기에 **"문서가 업데이트됐어요"** 알림을 보냅니다(응답을 먼저 돌려준 뒤에 보냅니다). 알림은 문서 이름(한 문서면 그 문서를 열고, 여러 개면 "a, b, c 외 N건"과 목록을 엽니다)을 보여 주고, push마다 따로 옵니다. 같은 커밋은 GitHub이 다시 보내도(수동 재전송) 한 번만 갑니다. 다만 **아무에게도 보내지 못한 경우**(구독자가 있는데 전부 실패)에는 기록을 풀어 두므로, 원인(예: VAPID 키 오타)을 고친 뒤 GitHub webhook의 **Redeliver**로 다시 보낼 수 있습니다. 서버가 발송 도중에 멈춘 드문 경우에는 기록만 남아 다시 보내기가 막히니, 필요하면 `delete from notified_commits where sha = '<커밋 SHA>'`로 기록을 지우세요. 알림 환경변수가 없으면 알림만 건너뛰고 캐시 갱신은 그대로 동작합니다.
+
 ## 달력과 일정
 
 헤더의 **달력**(`/calendar`)에서 월 달력으로 일정을 봅니다. 날짜를 누르면 그날의 일정이 나오고, **일정 추가·수정·삭제**는 팀 편집 코드(`EDIT_CODE`)를 아는 사람만 할 수 있습니다. 바꾸려 할 때 코드를 묻고, 맞으면 7일 동안 기억합니다. 조회는 코드 없이 됩니다.
@@ -87,7 +89,7 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 
 ## 푸시 알림 설정
 
-구독한 기기에 알림을 보낼 수 있는 기반입니다. 알림은 **일정(전날·당일)과 모임(열림·확정) 소식용**이고, 그 알림을 보내는 기능은 이후 계획에서 추가됩니다. **문서가 바뀌었다는 알림은 보내지 않습니다.** 지금은 `npm run push:test`로 보내는 시험 알림만 갑니다. 로그인이 없어서 누구나 종 아이콘으로 구독할 수 있습니다(구독은 최대 100대).
+구독한 기기에 알림을 보냅니다. 알림은 **일정(전날·당일)**, **모임(열림·확정)**, **문서 업데이트(`develop` push)** 소식용입니다. `npm run push:test`로 시험 알림도 보낼 수 있습니다. 로그인이 없어서 누구나 종 아이콘으로 구독할 수 있습니다(구독은 최대 100대).
 
 1. Neon Postgres를 만들고 연결 문자열을 `DATABASE_URL`에 넣습니다. (Vercel에서는 Marketplace의 Neon을 프로젝트에 연결하면 환경변수가 자동으로 들어갑니다.)
 2. `npm run vapid`로 키 한 쌍을 만들어 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`에 넣고, `VAPID_SUBJECT`(예: `mailto:me@example.com`)도 채웁니다.

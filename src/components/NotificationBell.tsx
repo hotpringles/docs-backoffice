@@ -118,7 +118,7 @@ function Panel({ state, onTurnOn, onTurnOff }: { state: State; onTurnOn: () => v
 
   return (
     <>
-      <p>{state.subscribed ? "이 기기에서 알림을 받고 있어요." : "일정과 모임 소식을 알림으로 받을 수 있어요."}</p>
+      <p>{state.subscribed ? "이 기기에서 알림을 받고 있어요." : "일정, 모임, 문서 업데이트 소식을 알림으로 받을 수 있어요."}</p>
       <button type="button" disabled={state.busy} onClick={state.subscribed ? onTurnOff : onTurnOn}>
         {state.busy ? "처리 중…" : state.subscribed ? "알림 끄기" : "알림 받기"}
       </button>
