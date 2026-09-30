@@ -1145,9 +1145,15 @@ button[type="submit"]:hover:not(:disabled) {
   background: color-mix(in srgb, var(--accent) 88%, black);
 }
 
+/* 저장 줄의 안내 글(저장했어요, 저장하지 않은 변경이 있어요, 오류)은 왼쪽에서 남는 폭을 차지하고, 저장 버튼은 오른쪽에 남는다. */
+.availability .editor-actions > span {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
 /* 내 시간 화면의 저장 줄: 표가 길어도 저장 버튼이 화면 아래에 늘 보이게 붙인다. */
 .availability .editor-actions {
-  justify-content: space-between; /* 저장 버튼은 오른쪽, "저장하지 않은 변경" 안내는 왼쪽 */
   position: sticky;
   bottom: 0;
   z-index: 3;

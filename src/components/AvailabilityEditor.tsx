@@ -279,13 +279,11 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
         <button type="button" onClick={save} disabled={!editable || busy || !dirty}>
           {busy ? "저장 중…" : "저장"}
         </button>
-        {dirty && <span className="meta">저장하지 않은 변경이 있어요.</span>}
+        {/* 저장 결과·오류·"저장하지 않은 변경" 안내는 모두 저장 줄의 왼쪽 한 곳에 뜬다(저장 버튼 아래로 밀려나 화면 밖에 가려지지 않게). */}
+        <span className={message?.kind === "error" ? "form-error" : "meta"} role={message?.kind === "error" ? "alert" : "status"}>
+          {message ? message.text : dirty ? "저장하지 않은 변경이 있어요." : ""}
+        </span>
       </div>
-      {message && (
-        <p className={message.kind === "ok" ? "meta" : "form-error"} role={message.kind === "ok" ? "status" : "alert"}>
-          {message.text}
-        </p>
-      )}
     </div>
   );
 }
