@@ -37,7 +37,7 @@ export function EventEditor({ date, events, people, canEdit }: Props) {
 
   function perform(action: Pending) {
     if (action.kind === "add") setDraft({ eventId: null, form: emptyForm(date) });
-    else if (action.kind === "edit") setDraft({ eventId: action.event.id, form: formFromEvent(action.event) });
+    else if (action.kind === "edit") setDraft({ eventId: action.event.id, form: formFromEvent(action.event, people) });
     else if (action.kind === "delete") void remove(action.event);
   }
 

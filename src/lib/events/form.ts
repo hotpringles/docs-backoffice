@@ -1,3 +1,4 @@
+import type { Person } from "@/lib/people";
 import type { EventRecord } from "./store";
 
 /** 일정 폼에 입력 중인 값. 종일이면 시각 칸은 무시된다. */
@@ -25,7 +26,12 @@ export function emptyForm(date: string): EventFormState {
   };
 }
 
-export function formFromEvent(event: EventRecord): EventFormState {
+/**
+ * 저장된 일정을 폼에 옮긴다. 명단(`PEOPLE`)에서 나중에 빠진 참석자는 옮기지 않는다.
+ * 폼에는 지금 명단의 사람만 체크박스로 나오므로 끌 방법이 없고, 그대로 저장하면 서버가 "명단에 없는 참석자"로 거절해서
+ * 그 일정을 다시는 고칠 수 없게 되기 때문이다. (저장하면 빠진 참석자는 일정에서 자연스럽게 사라진다.)
+ */
+export function formFromEvent(event: EventRecord, people: Person[]): EventFormState {
   return {
     title: event.title,
     date: event.date,
@@ -33,7 +39,7 @@ export function formFromEvent(event: EventRecord): EventFormState {
     startTime: event.startTime ?? "09:00",
     endTime: event.endTime ?? "10:00",
     memo: event.memo ?? "",
-    attendeeIds: [...event.attendeeIds],
+    attendeeIds: event.attendeeIds.filter((id) => people.some((person) => person.id === id)),
     remindOffsets: [...event.remindOffsets],
   };
 }
