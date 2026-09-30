@@ -123,7 +123,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 - "오늘"은 항상 `Asia/Seoul` 기준으로 계산한다.
 
 ### 5.7 스케줄러 (`GET /api/cron/reminders`)
-- `vercel.json`의 cron: `0 0 * * *`(UTC). Hobby는 하루 1회만 되고 실행 시각이 지정한 시 안에서 ±59분 흔들리므로, 한국시간 09:00~09:59경에 실행된다. (Vercel Cron의 시간대는 UTC로 알고 있으며 구현 때 공식 문서로 확인)
+- `vercel.json`의 cron: `0 0 * * *`(UTC). Hobby는 하루 1회만 되고 실행 시각이 지정한 시 안에서 ±59분 흔들리므로, 한국시간 09:00~09:59경에 실행된다. (확인 완료: Vercel Cron의 시간대는 항상 UTC이고, `CRON_SECRET`은 `Authorization: Bearer <값>` 헤더로 전달된다.)
 - 요청은 `CRON_SECRET`으로 검증한다. 일치하지 않으면 401.
 - 동작: 한국시간 오늘 날짜 `today`를 구하고, 각 일정에서 `event_date - offset = today`인 알림 시점을 찾는다. 찾은 각 항목을 `sent_reminders`에 `on conflict do nothing`으로 넣고, **실제로 삽입된 것만** 발송 대상으로 삼는다. 같은 실행이 두 번 돌아도 같은 알림이 두 번 가지 않는다.
 - 한 번의 실행에서 여러 건이면 알림 하나로 묶는다. 각 줄은 "오늘: 제목", "내일: 제목", "3일 뒤: 제목" 형식이고 최대 3줄, 넘으면 "외 N건". 열 주소는 `/events`.
@@ -213,7 +213,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 4. Neon 깨어남 지연이 webhook 10초 안에서 문제가 되는지, 일정 화면과 cron 응답에 영향이 없는지 실측.
 5. (해당 없음) 문서 변경 알림을 뺐으므로 webhook 뒤 발송(`after`)은 쓰지 않는다. 일정·모임 알림의 발송 방식은 계획 3·4에서 정한다.
 6. push 페이로드의 커밋 목록이 큰 push에서 잘리는 경우의 동작.
-7. Vercel Cron의 시간대(UTC 가정)와 `CRON_SECRET` 검증 방식(요청 헤더 형식)을 공식 문서로 확인.
+7. (확인 완료) Vercel Cron의 시간대는 항상 UTC이고, `CRON_SECRET`은 `Authorization: Bearer <값>` 헤더로 전달된다. Hobby는 하루 한 번만 되고 시각은 지정한 시 안에서 임의(±59분)이며, 실패해도 재시도하지 않고 전달이 누락되거나 중복될 수 있다.
 8. 편집 코드 잠금 기준(10분에 5회 실패)과 쿠키 유효 기간(7일)이 적절한지.
 9. Hobby 조건은 수업, 동아리, 무급 팀 기준으로 판단했다. 팀 구성이 바뀌어 급여나 연구비를 받는 사람이 업무로 참여하게 되면 Vercel 지원팀에 문의하거나 다른 배포처를 검토한다.
 10. **대형 그림의 전송 방식.** 샘플은 압축 문자열이 약 156KB, 풀면 JSON이 약 569KB다. 서버가 풀어서 JSON을 넘길지, 압축 문자열을 넘기고 브라우저에서 풀지 구현 때 전송 크기와 렌더 속도를 실측해 정한다.

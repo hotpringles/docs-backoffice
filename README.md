@@ -28,6 +28,11 @@ npm run dev
 | `DATABASE_URL` | Neon Postgres 연결 문자열 (푸시 알림) |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | 웹 푸시 VAPID 키 한 쌍 (푸시 알림) |
 | `VAPID_SUBJECT` | `mailto:이메일` 또는 `https://주소` (푸시 알림) |
+| `EDIT_CODE` | 일정을 바꿀 때 입력하는 팀 공용 편집 코드 (8자 이상, 16자 이상 무작위 권장) |
+| `SESSION_SECRET` | 편집 쿠키 서명용 비밀키 (16자 이상). 바꾸면 기존 편집 로그인이 모두 풀린다 |
+| `CRON_SECRET` | 일정 알림 cron 인증용 (16자 이상). Vercel이 `Authorization: Bearer` 헤더로 자동 전송한다 |
+| `PEOPLE` | 참가자 명단 `p1:참가자 1,p2:참가자 2,...` (1~10명, 비우면 `참가자 1~5`) |
+| `LOCAL_MEMORY_DB` | `1`이면 Neon 없이 메모리 DB로 달력을 미리 본다 (개발 모드 전용) |
 
 ## 명령
 
@@ -56,6 +61,18 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 - Secret: `GITHUB_WEBHOOK_SECRET`과 같은 값
 - Events: Just the push event
 
+## 달력과 일정
+
+헤더의 **달력**(`/calendar`)에서 월 달력으로 일정을 봅니다. 날짜를 누르면 그날의 일정이 나오고, **일정 추가·수정·삭제**는 팀 편집 코드(`EDIT_CODE`)를 아는 사람만 할 수 있습니다. 바꾸려 할 때 코드를 묻고, 맞으면 7일 동안 기억합니다. 조회는 코드 없이 됩니다.
+
+- 일정에는 제목, 날짜, 시각(종일 또는 시작~종료), 메모, 참석자, 알림 시점(당일·1일 전·3일 전)이 있습니다.
+- 편집 코드를 5번 틀리면 그 IP는 10분 동안 막힙니다.
+- **일정 알림:** 매일 한 번(한국시간 오전 9시~9시 59분 사이) 오늘 알릴 일정을 구독한 기기 전체에 한 통으로 보냅니다. Vercel Hobby의 cron은 하루 한 번만 되고, 실행 시각이 그 시(時) 안에서 흔들립니다. 보낼 항목을 먼저 기록하므로 같은 날 두 번 실행돼도 알림은 한 번이고, 아무에게도 못 보냈으면 기록을 풀어서 다시 호출하면 재시도됩니다. Vercel은 cron 전달이 드물게 누락되거나 중복될 수 있다고 안내하고, 실패해도 다시 시도하지 않습니다.
+- 알림을 수동으로 보내 보려면(서버를 띄운 뒤나 배포 후): `curl -H "Authorization: Bearer <CRON_SECRET>" https://<주소>/api/cron/reminders`
+- 필요한 값 만들기: `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`를 세 번 실행해서 `EDIT_CODE`(팀에게 알릴 것), `SESSION_SECRET`, `CRON_SECRET`에 각각 넣습니다. 편집 코드는 저장소나 공개 채팅에 올리지 마세요.
+- **Neon 없이 미리 보기:** `.env.local`에 `LOCAL_MEMORY_DB=1`, `EDIT_CODE=...`, `SESSION_SECRET=...`을 넣고 `npm run dev`를 실행하면 메모리 데이터베이스로 달력을 써 볼 수 있습니다(서버를 다시 켜면 일정이 사라집니다). 일정 알림까지 시험하려면 `DATABASE_URL=local-memory`와 VAPID 값, `CRON_SECRET`도 넣습니다.
+- 참가자 명단은 `PEOPLE`로 정합니다. 일정의 참석자는 번호(`p1`)로 저장되므로, 나중에 실제 이름으로 바꿔도 기록이 유지됩니다.
+
 ## 푸시 알림 설정
 
 구독한 기기에 알림을 보낼 수 있는 기반입니다. 알림은 **일정(전날·당일)과 모임(열림·확정) 소식용**이고, 그 알림을 보내는 기능은 이후 계획에서 추가됩니다. **문서가 바뀌었다는 알림은 보내지 않습니다.** 지금은 `npm run push:test`로 보내는 시험 알림만 갑니다. 로그인이 없어서 누구나 종 아이콘으로 구독할 수 있습니다(구독은 최대 100대).
@@ -77,6 +94,9 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 - `src/lib/db/`: 데이터베이스 연결(Neon), 마이그레이션 실행기, 테스트용 메모리 Postgres. 마이그레이션 SQL은 `db/migrations/`
 - `src/lib/push/`: 구독 검증과 저장, 알림 문구와 발송, 브라우저 쪽 구독 로직
 - `public/sw.js`: 알림을 화면에 띄우는 서비스 워커
+- `src/lib/events/`, `src/lib/calendar/`: 일정 검증·저장·쓰기 API와 월 달력 계산
+- `src/lib/auth/`: 편집 코드 로그인(서명 쿠키, 실패 잠금)
+- `src/lib/reminders/`: 일정 알림(보낼 항목 차지·해제, 문구, cron 요청 처리). cron 설정은 `vercel.json`
 - `src/app/`: 문서 목록(`/`), 문서 상세(`/docs/...`), webhook(`/api/github-webhook`), 구독 API(`/api/push/subscriptions`), 앱 설명(`/manifest.webmanifest`)과 아이콘
 
 ## 운영 메모

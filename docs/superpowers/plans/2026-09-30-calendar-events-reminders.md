@@ -4572,14 +4572,15 @@ git commit -m "feat: add the month calendar page with event add, edit and delete
 ### Task 10: 로컬 미리보기, 문서, 실제 서버와 브라우저 확인
 
 **Files:**
-- Create: `src/lib/db/memory.ts`, `src/lib/db/memory.test.ts`
-- Modify: `src/lib/db/index.ts`, `.env.example`, `README.md`, `docs/superpowers/specs/2026-09-30-docs-backoffice-design.md`, `docs/superpowers/specs/2026-09-30-calendar-and-meetups-design.md`
+- Create: `src/lib/db/memory.ts`, `src/lib/db/memory.test.ts`, `src/lib/db/memory-bundling.test.ts`
+- Modify: `src/lib/db/index.ts`, `next.config.ts`, `.env.example`, `README.md`, `docs/superpowers/specs/2026-09-30-docs-backoffice-design.md`, `docs/superpowers/specs/2026-09-30-calendar-and-meetups-design.md`
 
 **Interfaces:**
 - Consumes: 계획 2의 `createTestDb`, 앞 작업의 전체 결과
 - Produces:
   - `createMemoryDb(): Db` — 메모리 Postgres(PGlite)를 만들고 마이그레이션을 적용한다(준비되는 동안 들어온 쿼리는 기다린다).
   - `getDbOrNull()`이 **개발 모드에서 `LOCAL_MEMORY_DB=1`이면** 메모리 DB를 돌려준다(서버를 끄면 데이터가 사라진다). 프로덕션 빌드에서는 이 분기가 통째로 빠지고 PGlite도 번들에 들어가지 않는다(Step 7에서 확인).
+  - `next.config.ts`: `serverExternalPackages`(PGlite를 번들하지 않고 Node가 직접 불러오게 함)와 `outputFileTracingExcludes`(배포되는 서버 함수에 PGlite 파일 약 25MB가 딸려 가지 않게 함). 둘 다 **진짜 서버로 확인하다가 발견한 결함**의 수정이다(Step 6, Step 8).
   - 진짜 서버와 브라우저에서 확인한 결과.
 
 Neon 계정 없이도 사용자가 `localhost`에서 달력을 써 볼 수 있게 하려는 개발 편의 기능이다.
@@ -4619,10 +4620,28 @@ describe("createMemoryDb", () => {
 });
 `````
 
+**`src/lib/db/memory-bundling.test.ts`**
+
+`````ts
+import { describe, expect, it } from "vitest";
+import nextConfig from "../../../next.config";
+
+describe("next.config — 로컬 미리보기용 메모리 DB", () => {
+  it("PGlite는 번들하지 않고 Node가 직접 불러오게 한다(번들하면 wasm 파일 경로를 URL로 넘겨서 읽지 못한다)", () => {
+    expect(nextConfig.serverExternalPackages).toContain("@electric-sql/pglite");
+  });
+
+  it("배포되는 서버 함수에 PGlite 파일(약 25MB)이 딸려 가지 않게 파일 추적에서 뺀다(프로덕션에서는 쓰지 않는다)", () => {
+    const excluded = Object.values(nextConfig.outputFileTracingExcludes ?? {}).flat();
+    expect(excluded).toContain("./node_modules/@electric-sql/pglite/**/*");
+  });
+});
+`````
+
 - [ ] **Step 2: 실패를 확인한다**
 
-Run: `npx vitest run src/lib/db/memory.test.ts`
-Expected: FAIL — `./memory` 모듈을 찾을 수 없다는 오류.
+Run: `npx vitest run src/lib/db/memory.test.ts src/lib/db/memory-bundling.test.ts`
+Expected: FAIL — `./memory` 모듈을 찾을 수 없고, `next.config`에 `serverExternalPackages`와 `outputFileTracingExcludes`가 없다는 오류.
 
 - [ ] **Step 3: 구현한다**
 
@@ -4685,6 +4704,32 @@ export function getDbOrNull(env: Record<string, string | undefined> = process.en
   db ??= createNeonDb(url);
   return db;
 }
+`````
+
+아래 `next.config.ts`는 파일 전체를 이 내용으로 바꾼다. (이 두 설정이 없으면 개발 서버에서 메모리 DB가 `The "path" argument must be of type string ... Received an instance of URL` 오류로 실패하고, 프로덕션 배포에는 PGlite 파일 약 25MB가 모든 서버 함수에 실린다. 둘 다 Step 6, Step 8에서 진짜 서버로 확인하다가 발견했다.)
+
+**`next.config.ts`**
+
+`````ts
+import type { NextConfig } from "next";
+import { serviceWorkerHeaders } from "./src/lib/pwa/headers";
+
+const nextConfig: NextConfig = {
+  // 로컬 미리보기용 메모리 DB(PGlite)는 자기 wasm 파일을 파일 경로로 찾는다. 번들에 넣으면 그 경로가 URL 객체로 바뀌어
+  // 읽지 못하므로, 번들하지 않고 Node가 직접 불러오게 한다.
+  serverExternalPackages: ["@electric-sql/pglite"],
+  // 프로덕션에서는 메모리 DB를 쓰지 않는다(그 분기는 빌드에서 빠진다). 그런데 파일 추적기는 코드의 import를 그대로 따라가서
+  // 배포되는 서버 함수마다 PGlite 파일(약 25MB)을 싣는다. 쓰지 않는 파일이라 추적에서 뺀다.
+  outputFileTracingExcludes: {
+    "/*": ["./node_modules/@electric-sql/pglite/**/*"],
+    "/**": ["./node_modules/@electric-sql/pglite/**/*"],
+  },
+  async headers() {
+    return serviceWorkerHeaders();
+  },
+};
+
+export default nextConfig;
 `````
 
 - [ ] **Step 4: 통과를 확인한다**
@@ -4888,11 +4933,27 @@ Expected:
 ```bash
 rm -rf .next
 GITHUB_REPO=kakaotechcampus-4/ktc4-kyungpook-3 GITHUB_BRANCH=develop DOCS_PATHS=frontend/docs/plan GITHUB_WEBHOOK_SECRET=test-secret npm run build
-grep -rli "pglite" .next/server | head -3
-echo "(위에 파일 이름이 하나도 나오지 않아야 한다)"
+grep -rl "LOCAL_MEMORY_DB" .next/server --include=*.js | head -3
+echo "(위에 파일 이름이 하나도 나오지 않아야 한다: 메모리 DB 분기가 빠졌다)"
+node -e '
+const fs = require("fs"), path = require("path");
+let total = 0, withPglite = 0, files = 0;
+(function walk(dir) {
+  for (const name of fs.readdirSync(dir)) {
+    const p = path.join(dir, name);
+    if (fs.statSync(p).isDirectory()) walk(p);
+    else if (name.endsWith(".nft.json")) {
+      total += 1;
+      const hits = JSON.parse(fs.readFileSync(p, "utf8")).files.filter((f) => /pglite/i.test(f)).length;
+      if (hits) { withPglite += 1; files += hits; }
+    }
+  }
+})(".next/server");
+console.log("배포 추적 목록", total, "개 중 pglite가 든 것", withPglite, "개 (합계", files, "파일)");
+'
 ```
 
-Expected: 빌드가 성공하고 `/calendar`, `/api/auth/login`, `/api/auth/logout`, `/api/events`, `/api/events/[id]`, `/api/events/[id]/delete`, `/api/cron/reminders`가 라우트 목록에 있다. `grep`은 아무것도 출력하지 않는다. 만약 파일이 나오면 메모리 DB 분기가 번들에 남은 것이므로, `src/lib/db/index.ts`의 분기를 `process.env.NODE_ENV === "development"` 검사로 바꾸는 등 다른 방식으로 고치고 계획에 기록한다.
+Expected: 빌드가 성공하고 `/calendar`, `/api/auth/login`, `/api/auth/logout`, `/api/events`, `/api/events/[id]`, `/api/events/[id]/delete`, `/api/cron/reminders`가 라우트 목록에 있다. 첫 `grep`은 아무것도 출력하지 않는다(메모리 DB 분기가 실행 코드에서 빠졌다). 배포 추적 목록의 pglite는 라우트마다 별칭 파일 1개뿐이다(`outputFileTracingExcludes`가 없으면 라우트마다 176개 파일, 약 25MB가 잡힌다). 그보다 많으면 `next.config.ts`의 제외 설정을 확인한다.
 
 - [ ] **Step 9: 전체 검사를 돌리고 커밋한다**
 
