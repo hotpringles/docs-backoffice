@@ -3,7 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { MAX_TITLE_LENGTH } from "@/lib/events/validate";
+import { shortDayLabel } from "@/lib/calendar/view";
 import { createMeetup } from "@/lib/meetups/client";
+import { meetupDateWindow } from "@/lib/meetups/slots";
 import { CodeForm } from "./CodeForm";
 import { useEditGate } from "./useEditGate";
 
@@ -25,8 +27,16 @@ export function MeetupCreator({ canEdit, today }: { canEdit: boolean; today: str
     if (action === "open") setOpen(true);
   });
 
+  // 후보 날짜는 오늘부터 일주일 뒤까지만 고를 수 있다(서버도 같은 범위를 검사한다).
+  const range = meetupDateWindow(today);
+
   function patch(update: Partial<Form>) {
-    setForm((current) => ({ ...current, ...update }));
+    setForm((current) => {
+      const next = { ...current, ...update };
+      // 시작일을 끝일보다 뒤로 옮기면 끝일도 함께 옮겨서 "끝이 시작보다 빠름" 오류가 나지 않게 한다.
+      if (update.startDate !== undefined && update.endDate === undefined && next.startDate > next.endDate) next.endDate = next.startDate;
+      return next;
+    });
   }
 
   function cancel() {
@@ -93,11 +103,11 @@ export function MeetupCreator({ canEdit, today }: { canEdit: boolean; today: str
 
       <label>
         후보 날짜 시작
-        <input type="date" value={form.startDate} onChange={(e) => patch({ startDate: e.target.value })} required />
+        <input type="date" value={form.startDate} min={range.min} max={range.max} onChange={(e) => patch({ startDate: e.target.value })} required />
       </label>
       <label>
         후보 날짜 끝
-        <input type="date" value={form.endDate} onChange={(e) => patch({ endDate: e.target.value })} required />
+        <input type="date" value={form.endDate} min={form.startDate || range.min} max={range.max} onChange={(e) => patch({ endDate: e.target.value })} required />
         {fieldErrors.dates && <span className="field-error">{fieldErrors.dates}</span>}
       </label>
 
@@ -112,7 +122,9 @@ export function MeetupCreator({ canEdit, today }: { canEdit: boolean; today: str
         </label>
       </div>
       {fieldErrors.time && <span className="field-error">{fieldErrors.time}</span>}
-      <p className="meta">후보 날짜는 최대 14일이고, 시간은 30분 단위예요.</p>
+      <p className="meta">
+        후보 날짜는 오늘부터 일주일 뒤({shortDayLabel(range.max)})까지 고를 수 있고, 시간은 30분 단위예요.
+      </p>
 
       <div className="form-actions">
         <button type="submit" disabled={busy}>

@@ -12,12 +12,15 @@ const people: Person[] = [
   { id: "p2", name: "참가자 2" },
 ];
 
+// 오늘은 10/7로 본다(후보 날짜는 오늘부터 7일 뒤인 10/14까지)
+const TODAY = "2026-10-07";
+
 // 10/7~10/8 이틀, 09:00~13:00(칸 8개)
 const meetup: MeetupShape = { dates: ["2026-10-07", "2026-10-08"], dayStart: "09:00", dayEnd: "13:00", slotMinutes: 30 };
 
 describe("validateMeetupInput", () => {
   it("제목과 날짜 범위만 있으면 하루 범위는 09:00~22:00이다", () => {
-    const result = validateMeetupInput({ title: " 스터디 일정 ", startDate: "2026-10-07", endDate: "2026-10-09" });
+    const result = validateMeetupInput({ title: " 스터디 일정 ", startDate: "2026-10-07", endDate: "2026-10-09" }, TODAY);
     expect(result).toEqual({
       ok: true,
       value: { title: "스터디 일정", dates: ["2026-10-07", "2026-10-08", "2026-10-09"], dayStart: "09:00", dayEnd: "22:00" },
@@ -25,35 +28,67 @@ describe("validateMeetupInput", () => {
   });
 
   it("하루 범위를 직접 정할 수 있고, 빈 문자열이면 기본값이다", () => {
-    const custom = validateMeetupInput({ title: "a", startDate: "2026-10-07", endDate: "2026-10-07", dayStart: "10:00", dayEnd: "18:30" });
+    const custom = validateMeetupInput({ title: "a", startDate: "2026-10-07", endDate: "2026-10-07", dayStart: "10:00", dayEnd: "18:30" }, TODAY);
     expect(custom).toMatchObject({ ok: true, value: { dayStart: "10:00", dayEnd: "18:30" } });
-    const blank = validateMeetupInput({ title: "a", startDate: "2026-10-07", endDate: "2026-10-07", dayStart: "", dayEnd: " " });
+    const blank = validateMeetupInput({ title: "a", startDate: "2026-10-07", endDate: "2026-10-07", dayStart: "", dayEnd: " " }, TODAY);
     expect(blank).toMatchObject({ ok: true, value: { dayStart: "09:00", dayEnd: "22:00" } });
   });
 
   it("제목이 비었거나 101자 이상이면 거부한다", () => {
     for (const title of ["", "  ", undefined, 5, "가".repeat(101)]) {
-      const result = validateMeetupInput({ title, startDate: "2026-10-07", endDate: "2026-10-07" });
+      const result = validateMeetupInput({ title, startDate: "2026-10-07", endDate: "2026-10-07" }, TODAY);
       expect(result.ok, String(title)).toBe(false);
       if (!result.ok) expect(result.errors.title, String(title)).toBeTruthy();
     }
-    expect(validateMeetupInput({ title: "가".repeat(100), startDate: "2026-10-07", endDate: "2026-10-07" }).ok).toBe(true);
+    expect(validateMeetupInput({ title: "가".repeat(100), startDate: "2026-10-07", endDate: "2026-10-07" }, TODAY).ok).toBe(true);
   });
 
-  it("날짜가 올바르지 않거나 끝이 시작보다 빠르거나 14일을 넘으면 거부한다", () => {
+  it("날짜가 올바르지 않거나 끝이 시작보다 빠르면 거부한다", () => {
     const cases = [
       { startDate: "2026-02-30", endDate: "2026-03-02" },
       { startDate: "abc", endDate: "2026-10-07" },
       { startDate: "2026-10-08", endDate: "2026-10-07" },
-      { startDate: "2026-10-01", endDate: "2026-10-15" },
       { startDate: undefined, endDate: undefined },
     ];
     for (const dates of cases) {
-      const result = validateMeetupInput({ title: "a", ...dates });
+      const result = validateMeetupInput({ title: "a", ...dates }, TODAY);
       expect(result.ok, JSON.stringify(dates)).toBe(false);
       if (!result.ok) expect(result.errors.dates, JSON.stringify(dates)).toBeTruthy();
     }
-    expect(validateMeetupInput({ title: "a", startDate: "2026-10-01", endDate: "2026-10-14" }).ok).toBe(true);
+  });
+
+  it("후보 날짜는 오늘부터 7일 뒤까지(양 끝 포함)만 고를 수 있다", () => {
+    const ok = [
+      { startDate: "2026-10-07", endDate: "2026-10-07" },
+      { startDate: "2026-10-14", endDate: "2026-10-14" },
+      { startDate: "2026-10-07", endDate: "2026-10-14" },
+    ];
+    for (const dates of ok) expect(validateMeetupInput({ title: "a", ...dates }, TODAY).ok, JSON.stringify(dates)).toBe(true);
+
+    const rejected = [
+      { startDate: "2026-10-06", endDate: "2026-10-07" }, // 어제부터
+      { startDate: "2026-10-06", endDate: "2026-10-06" }, // 어제 하루
+      { startDate: "2026-10-14", endDate: "2026-10-15" }, // 8일 뒤까지
+      { startDate: "2026-10-15", endDate: "2026-10-15" }, // 8일 뒤 하루
+      { startDate: "2026-11-01", endDate: "2026-11-02" }, // 한참 뒤
+    ];
+    for (const dates of rejected) {
+      const result = validateMeetupInput({ title: "a", ...dates }, TODAY);
+      expect(result.ok, JSON.stringify(dates)).toBe(false);
+      if (!result.ok) expect(result.errors.dates, JSON.stringify(dates)).toContain("10/14(수)");
+    }
+  });
+
+  it("범위를 알려 주는 메시지에는 오늘 날짜와 마지막 날짜가 들어 있다", () => {
+    const result = validateMeetupInput({ title: "a", startDate: "2026-10-20", endDate: "2026-10-21" }, TODAY);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.dates).toBe("후보 날짜는 오늘(10/7(수))부터 일주일 뒤(10/14(수))까지만 고를 수 있어요.");
+  });
+
+  it("오늘이 바뀌면 고를 수 있는 범위도 함께 움직인다", () => {
+    const dates = { startDate: "2026-10-20", endDate: "2026-10-21" };
+    expect(validateMeetupInput({ title: "a", ...dates }, "2026-10-07").ok).toBe(false);
+    expect(validateMeetupInput({ title: "a", ...dates }, "2026-10-15").ok).toBe(true);
   });
 
   it("하루 범위가 30분 단위가 아니거나 끝이 시작보다 앞서거나 같으면 거부한다", () => {
@@ -67,17 +102,17 @@ describe("validateMeetupInput", () => {
       { dayStart: 900, dayEnd: 1200 },
     ];
     for (const range of cases) {
-      const result = validateMeetupInput({ title: "a", startDate: "2026-10-07", endDate: "2026-10-07", ...range });
+      const result = validateMeetupInput({ title: "a", startDate: "2026-10-07", endDate: "2026-10-07", ...range }, TODAY);
       expect(result.ok, JSON.stringify(range)).toBe(false);
       if (!result.ok) expect(result.errors.time, JSON.stringify(range)).toBeTruthy();
     }
   });
 
   it("틀린 필드를 한꺼번에 알려주고, 객체가 아닌 본문은 거부한다", () => {
-    const result = validateMeetupInput({ title: "", startDate: "abc", endDate: "abc", dayStart: "9" });
+    const result = validateMeetupInput({ title: "", startDate: "abc", endDate: "abc", dayStart: "9" }, TODAY);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(Object.keys(result.errors).sort()).toEqual(["dates", "time", "title"]);
-    for (const raw of [null, undefined, [], "x", 5]) expect(validateMeetupInput(raw).ok, String(raw)).toBe(false);
+    for (const raw of [null, undefined, [], "x", 5]) expect(validateMeetupInput(raw, TODAY).ok, String(raw)).toBe(false);
   });
 });
 

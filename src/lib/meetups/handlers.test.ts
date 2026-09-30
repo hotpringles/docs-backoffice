@@ -97,6 +97,19 @@ describe("create", () => {
     expect(scheduled).toEqual([]);
   });
 
+  it("후보 날짜는 서버 시계 기준 오늘부터 7일 뒤까지만 받는다(어제, 8일 뒤는 400)", async () => {
+    const handlers = createMeetupHandlers(deps());
+    // 오늘(NOW)은 서울 시간으로 10/7이다.
+    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-06", endDate: "2026-10-07" }))).status).toBe(400);
+    const late = await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-14", endDate: "2026-10-15" }));
+    expect(late.status).toBe(400);
+    expect((await late.json()).errors.dates).toContain("일주일");
+    expect(await listMeetups(db)).toEqual([]);
+    expect(scheduled).toEqual([]);
+
+    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-14", endDate: "2026-10-14" }))).status).toBe(201);
+  });
+
   it("알림 설정이 없거나 발송이 전부 실패해도 만들기는 성공한다", async () => {
     const missing = createMeetupHandlers(deps({ loadPushDeps: () => ({ ok: false, missing: ["VAPID_PRIVATE_KEY"] }) }));
     expect((await missing.create(post(NEW_MEETUP))).status).toBe(201);

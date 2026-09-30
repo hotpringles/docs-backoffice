@@ -1,3 +1,4 @@
+import { shortDayLabel } from "@/lib/calendar/view";
 import { isValidTime } from "@/lib/events/dates";
 import { MAX_TITLE_LENGTH, parseRemindOffsets } from "@/lib/events/validate";
 import type { Person } from "@/lib/people";
@@ -7,6 +8,7 @@ import {
   SLOT_MINUTES,
   boundaryOf,
   datesInRange,
+  meetupDateWindow,
   minutesOf,
   parseCellKey,
   slotCount,
@@ -43,8 +45,11 @@ function blankToNull(value: unknown): string | null | undefined {
   return trimmed === "" ? null : trimmed;
 }
 
-/** 새 모임 입력을 검사한다. 하루 범위를 비우면 09:00~22:00이다. */
-export function validateMeetupInput(raw: unknown): Result<MeetupInput> {
+/**
+ * 새 모임 입력을 검사한다. 하루 범위를 비우면 09:00~22:00이다.
+ * 후보 날짜는 `today`(서울 기준 오늘)부터 7일 뒤까지만 고를 수 있다.
+ */
+export function validateMeetupInput(raw: unknown, today: string): Result<MeetupInput> {
   if (!isRecord(raw)) return { ok: false, errors: notObject };
   const errors: MeetupFieldErrors = {};
 
@@ -55,7 +60,11 @@ export function validateMeetupInput(raw: unknown): Result<MeetupInput> {
   const startDate = typeof raw.startDate === "string" ? raw.startDate : "";
   const endDate = typeof raw.endDate === "string" ? raw.endDate : "";
   const dates = datesInRange(startDate, endDate);
-  if (!dates) errors.dates = "후보 날짜는 시작일부터 끝일까지 최대 14일이에요. 날짜를 YYYY-MM-DD로 입력하고, 끝일이 시작일보다 빠르면 안 돼요.";
+  const window = meetupDateWindow(today);
+  if (!dates) errors.dates = "후보 날짜는 시작일부터 끝일까지예요. 날짜를 YYYY-MM-DD로 입력하고, 끝일이 시작일보다 빠르면 안 돼요.";
+  else if (dates[0] < window.min || dates[dates.length - 1] > window.max) {
+    errors.dates = `후보 날짜는 오늘(${shortDayLabel(window.min)})부터 일주일 뒤(${shortDayLabel(window.max)})까지만 고를 수 있어요.`;
+  }
 
   const start = blankToNull(raw.dayStart);
   const end = blankToNull(raw.dayEnd);

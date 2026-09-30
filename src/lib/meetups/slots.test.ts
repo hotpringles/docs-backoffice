@@ -5,6 +5,7 @@ import {
   boundaryOf,
   cellKey,
   datesInRange,
+  meetupDateWindow,
   minutesOf,
   parseCellKey,
   slotCount,
@@ -86,5 +87,16 @@ describe("cellKey / parseCellKey", () => {
     for (const key of ["", "2026-10-07", "2026-10-07:", "2026-10-07:-1", "2026-10-07:1.5", "2026-10-07:abc", "10-07:4", "2026-10-07:4:5", "2026-10-07:1000"]) {
       expect(parseCellKey(key), key).toBeNull();
     }
+  });
+});
+
+describe("meetupDateWindow", () => {
+  it("후보 날짜를 고를 수 있는 범위는 오늘부터 7일 뒤까지(양 끝 포함)다", () => {
+    expect(meetupDateWindow("2026-10-07")).toEqual({ min: "2026-10-07", max: "2026-10-14" });
+  });
+
+  it("달과 해를 넘겨도 맞다", () => {
+    expect(meetupDateWindow("2026-12-28")).toEqual({ min: "2026-12-28", max: "2027-01-04" });
+    expect(meetupDateWindow("2026-02-25")).toEqual({ min: "2026-02-25", max: "2026-03-04" });
   });
 });
