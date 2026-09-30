@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { EventRecord } from "@/lib/events/store";
 import { monthGrid } from "./month";
-import { dayLabel, formatTimeRange, groupByDate, pickSelectedDate, remindLabel, visibleTitles } from "./view";
+import { dayLabel, formatTimeRange, groupByDate, pickOpenDate, remindLabel, visibleTitles } from "./view";
 
 const event = (id: number, date: string, overrides: Partial<EventRecord> = {}): EventRecord => ({
   id,
@@ -61,22 +61,17 @@ describe("formatTimeRange / dayLabel / remindLabel", () => {
   });
 });
 
-describe("pickSelectedDate", () => {
+describe("pickOpenDate", () => {
   const grid = monthGrid({ year: 2026, month: 10 });
 
-  it("보이는 달력 안의 날짜면 그대로 쓴다(이웃 달 칸도 포함)", () => {
-    expect(pickSelectedDate("2026-10-15", grid, "2026-10-07")).toBe("2026-10-15");
-    expect(pickSelectedDate("2026-09-28", grid, "2026-10-07")).toBe("2026-09-28");
+  it("주소의 ?date=가 보이는 달력 안의 날짜면 그 날짜의 창을 연다(이웃 달 칸도 포함)", () => {
+    expect(pickOpenDate("2026-10-15", grid)).toBe("2026-10-15");
+    expect(pickOpenDate("2026-09-28", grid)).toBe("2026-09-28");
   });
 
-  it("보이는 달력 밖이거나 이상한 값이면 무시하고, 오늘이 이 달이면 오늘을 고른다", () => {
+  it("없거나, 보이는 달력 밖이거나, 이상한 값이면 아무 창도 열지 않는다(오늘을 자동으로 고르지 않는다)", () => {
     for (const raw of ["2026-12-01", "2026-02-30", "abc", "", undefined, ["2026-10-15"]]) {
-      expect(pickSelectedDate(raw as string | undefined, grid, "2026-10-07"), String(raw)).toBe("2026-10-07");
+      expect(pickOpenDate(raw as string | undefined, grid), String(raw)).toBeNull();
     }
-  });
-
-  it("오늘이 이 달이 아니면 고르지 않는다", () => {
-    expect(pickSelectedDate(undefined, grid, "2026-11-20")).toBeNull();
-    expect(pickSelectedDate(undefined, grid, "2026-09-28")).toBeNull(); // 이웃 달 칸의 오늘은 자동 선택하지 않는다
   });
 });

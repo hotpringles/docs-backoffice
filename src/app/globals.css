@@ -43,6 +43,10 @@ html {
 }
 
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background: var(--bg);
   color: var(--fg);
@@ -168,10 +172,28 @@ h6 {
 
 /* ---------- 달력 ---------- */
 
+/* 달력 화면은 스크롤 없이 화면 높이에 딱 맞춘다(머리글을 뺀 나머지를 달력이 채운다). */
+body:has(.cal-page) {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.page.cal-page {
+  max-width: none;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0.9rem;
+  padding-bottom: 12px;
+}
+
 .cal-nav {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-bottom: 0.6rem;
 }
 
 .cal-nav h1 {
@@ -179,7 +201,12 @@ h6 {
   font-size: 1.25rem;
 }
 
-.cal-nav a {
+.cal-nav h1 a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.cal-nav > a {
   padding: 0.15rem 0.65rem;
   border: 1px solid var(--border-strong);
   border-radius: 6px;
@@ -187,56 +214,67 @@ h6 {
   text-decoration: none;
 }
 
-.cal-nav a:hover {
+.cal-nav > a:hover {
   background: var(--bg-soft);
 }
 
-.cal-nav .cal-today {
+.cal-add {
   margin-left: auto;
-  font-size: 0.9rem;
 }
 
 .cal {
-  width: 100%;
-  margin: 1rem 0;
-  border-collapse: collapse;
-  table-layout: fixed;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto repeat(var(--weeks), minmax(3.5rem, 1fr));
+  overflow-y: auto;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
 }
 
-.cal th {
+.cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-height: 0;
+}
+
+.cal-head > div {
   padding: 0.3rem 0;
   color: var(--muted);
   font-size: 0.8rem;
   font-weight: 500;
+  text-align: center;
 }
 
-.cal th.sun {
+.cal-head .sun {
   color: var(--danger);
 }
 
-.cal th.sat {
+.cal-head .sat {
   color: var(--accent);
 }
 
-.cal td {
-  padding: 0;
-  border: 1px solid var(--border);
-  vertical-align: top;
+.cal-td {
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .cal-cell {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-height: 4.5rem;
-  padding: 0.2rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.25rem;
   overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--fg);
-  text-decoration: none;
-}
-
-.cal-cell:hover {
-  background: var(--bg-soft);
+  text-align: left;
+  font-size: inherit;
 }
 
 .cal-cell.out {
@@ -250,13 +288,14 @@ h6 {
 }
 
 .cal-day {
+  align-self: flex-start;
   font-size: 0.8rem;
   line-height: 1.4rem;
 }
 
 .cal-cell.today .cal-day {
-  display: inline-block;
   min-width: 1.4rem;
+  padding: 0 0.3rem;
   border-radius: 999px;
   background: var(--accent);
   color: var(--on-accent);
@@ -265,6 +304,7 @@ h6 {
 
 .cal-event {
   display: block;
+  width: 100%;
   padding: 0 0.25rem;
   overflow: hidden;
   border-radius: 3px;
@@ -286,14 +326,90 @@ h6 {
   font-size: 0.68rem;
 }
 
-.day-panel {
-  margin-top: 1rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
+/* 날짜를 눌렀을 때 그 날짜 옆에 뜨는 작은 창. 자리(left/top)는 스크립트가 날짜 칸 옆으로 정한다. */
+.day-popover {
+  position: fixed;
+  top: 10vh;
+  left: 50%;
+  z-index: 30;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  max-height: 80vh;
+  padding: 0.85rem 1rem;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
 }
 
-.day-panel h2 {
-  margin: 0 0 0.5rem;
+.day-popover.placed {
+  transform: none;
+}
+
+.day-popover:focus {
+  outline: none;
+}
+
+.day-popover-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.day-popover-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.icon-button {
+  padding: 0 0.5rem;
+  border: 0;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+
+/* 폰처럼 좁은 화면에서는 날짜 옆에 둘 자리가 없어서 화면 아래에서 올라오는 시트로 그린다. */
+@media (max-width: 599px) {
+  .day-popover,
+  .day-popover.placed {
+    top: auto !important;
+    right: 8px;
+    bottom: 8px;
+    left: 8px !important;
+    width: auto;
+    max-height: 70vh !important;
+    transform: none;
+  }
+}
+
+/* 일정 추가·수정, 편집 코드 입력 대화 상자 */
+.modal {
+  width: min(28rem, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--fg);
+  box-shadow: var(--shadow);
+}
+
+.modal::backdrop {
+  background: rgb(0 0 0 / 35%);
+}
+
+.modal-body {
+  max-height: calc(100dvh - 24px);
+  padding: 1.1rem 1.25rem;
+  overflow-y: auto;
+}
+
+.modal-title {
+  margin: 0;
   font-size: 1.1rem;
 }
 
@@ -556,6 +672,7 @@ h6 {
 
 /* 읽기 폭 700px(Serenity의 기본 줄 길이). 양옆 여백 16px씩을 더한 값이다. */
 .page {
+  width: 100%;
   max-width: 44.5rem;
   margin: 0 auto;
   padding: 1.75rem 16px 4rem;

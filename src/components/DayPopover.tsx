@@ -1,0 +1,87 @@
+"use client";
+
+import Link from "next/link";
+import type { Ref } from "react";
+import { dayLabel, formatTimeRange, remindLabel } from "@/lib/calendar/view";
+import type { Placement } from "@/lib/calendar/popover";
+import type { EventRecord } from "@/lib/events/store";
+import { nameOf, type Person } from "@/lib/people";
+
+type Props = {
+  ref?: Ref<HTMLDivElement>;
+  date: string;
+  events: EventRecord[];
+  people: Person[];
+  /** 날짜 칸 옆에 둘 위치. null이면 CSS가 정한 자리(폰에서는 화면 아래 시트, 그 밖에는 화면 위쪽 가운데)에 뜬다. */
+  placement: Placement | null;
+  authed: boolean;
+  busy: boolean;
+  error: string | null;
+  onClose: () => void;
+  onEdit: (event: EventRecord) => void;
+  onDelete: (event: EventRecord) => void;
+  onEndEditing: () => void;
+};
+
+/** 달력에서 날짜를 눌렀을 때 그 날짜 옆에 뜨는 작은 창. 그 날의 일정을 보여 주고 수정·삭제로 이어진다. */
+export function DayPopover({ ref, date, events, people, placement, authed, busy, error, onClose, onEdit, onDelete, onEndEditing }: Props) {
+  return (
+    <div
+      ref={ref}
+      className={placement ? "day-popover placed" : "day-popover"}
+      role="dialog"
+      aria-label={`${dayLabel(date)} 일정`}
+      tabIndex={-1}
+      style={placement ? { left: placement.left, top: placement.top, maxHeight: placement.maxHeight } : undefined}
+    >
+      <div className="day-popover-head">
+        <h2>{dayLabel(date)}</h2>
+        <button type="button" className="icon-button" onClick={onClose} aria-label="닫기">
+          ×
+        </button>
+      </div>
+
+      {events.length === 0 ? (
+        <p className="empty">이날은 일정이 없어요.</p>
+      ) : (
+        <ul className="event-list">
+          {events.map((event) => (
+            <li key={event.id} className="event-item">
+              <div className="event-title">{event.title}</div>
+              {event.meetupId !== null && (
+                <p className="event-meta">
+                  <Link href={`/meetups/${event.meetupId}`}>모임에서 확정된 일정</Link>
+                </p>
+              )}
+              <p className="event-meta">{formatTimeRange(event)}</p>
+              {event.memo && <p className="event-memo">{event.memo}</p>}
+              {event.attendeeIds.length > 0 && (
+                <p className="event-meta">참석: {event.attendeeIds.map((id) => nameOf(people, id)).join(", ")}</p>
+              )}
+              <p className="event-meta">알림: {remindLabel(event.remindOffsets)}</p>
+              <div className="event-buttons">
+                <button type="button" onClick={() => onEdit(event)} disabled={busy}>
+                  수정
+                </button>
+                <button type="button" onClick={() => onDelete(event)} disabled={busy}>
+                  삭제
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
+      {authed && (
+        <button type="button" className="link-button" onClick={onEndEditing}>
+          편집 끝내기
+        </button>
+      )}
+    </div>
+  );
+}

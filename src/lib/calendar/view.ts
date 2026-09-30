@@ -36,11 +36,10 @@ export function remindLabel(offsets: number[]): string {
 }
 
 /**
- * 화면에서 선택한 날짜. `?date=`가 지금 보이는 달력 안의 날짜면 그 날짜, 아니면
- * 오늘이 이 달 안에 있을 때만 오늘, 그 밖에는 선택하지 않는다.
+ * 처음부터 열어 둘 날짜의 창. `?date=`가 지금 보이는 달력 안의 날짜(이웃 달 칸 포함)면 그 날짜, 아니면 null이다.
+ * 알림을 눌러 들어오거나 모임을 확정한 뒤 넘어올 때 그 날의 일정을 바로 보여 주려는 것이고, 그 밖에는 아무 창도 열지 않는다.
  */
-export function pickSelectedDate(raw: string | string[] | undefined, grid: DayCell[][], today: string): string | null {
-  const cells = grid.flat();
-  if (typeof raw === "string" && cells.some((cell) => cell.date === raw)) return raw;
-  return cells.some((cell) => cell.date === today && cell.inMonth) ? today : null;
+export function pickOpenDate(raw: string | string[] | undefined, grid: DayCell[][]): string | null {
+  if (typeof raw !== "string") return null;
+  return grid.flat().some((cell) => cell.date === raw) ? raw : null;
 }
