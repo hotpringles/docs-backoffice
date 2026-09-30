@@ -1,5 +1,12 @@
 # 달력, 일정, 편집 코드, 매일 알림 구현 계획 (계획 3/4)
 
+> **실행 뒤 달라진 점 (2026-09-30):** 구현하고 진짜 서버로 확인하고 최종 검토를 받으면서 아래 코드가 일부 바뀌었다. 이 문서의 코드 블록은 처음 계획대로 남겨 두었고, 바뀐 것은 git 기록(`git log main..feat/calendar-events`)과 `docs/superpowers/followups/2026-09-30-calendar-minors.md`에 있다.
+> - **로그인 잠금(Task 4·5):** `checkLock`/`recordFailure` 대신 `recordAttempt`(시도를 먼저 세고, 번호가 5 이하일 때만 코드를 평가). 동시 요청으로 잠금이 뚫리던 문제를 고쳤다.
+> - **일정 폼(Task 9):** `formFromEvent(event, people)`가 명단에서 빠진 참석자를 옮기지 않는다.
+> - **cron(Task 8):** 아무에게도 못 보냈으면(`released`) 200이 아니라 502로 응답한다.
+> - **`next.config.ts`(Task 10):** `serverExternalPackages`와 `outputFileTracingExcludes`로 PGlite를 번들·배포 추적에서 뺐다(진짜 서버 확인에서 발견).
+> - **`vitest.config.mts`:** 테스트 제한을 30초·훅 60초로 늘렸다(PGlite 테스트가 부하에서 무작위로 실패).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 사이트 안에 월 달력을 만들어 일정을 보고, 편집 코드를 아는 사람이 일정을 추가·수정·삭제하게 하고, 일정 전날·당일에 하루 한 번 폰으로 알림을 보낸다. Neon 없이도 화면을 볼 수 있게 로컬 미리보기 모드를 둔다.
