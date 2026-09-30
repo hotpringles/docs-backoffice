@@ -18,9 +18,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ko">
       <body>
         <header className="site-header">
-          <Link href="/" className="site-title">
-            Docs Backoffice
-          </Link>
+          <div className="site-nav">
+            <Link href="/" className="site-title">
+              Docs Backoffice
+            </Link>
+            <nav aria-label="주요 메뉴" className="site-links">
+              <Link href="/">문서</Link>
+              <Link href="/calendar">달력</Link>
+            </nav>
+          </div>
           <NotificationBell />
         </header>
         {children}
