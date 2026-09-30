@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { formatTimeRange, remindLabel } from "@/lib/calendar/view";
@@ -234,6 +235,11 @@ export function EventEditor({ date, events, people, canEdit }: Props) {
               {events.map((event) => (
                 <li key={event.id} className="event-item">
                   <div className="event-title">{event.title}</div>
+                  {event.meetupId !== null && (
+                    <p className="event-meta">
+                      <Link href={`/meetups/${event.meetupId}`}>모임에서 확정된 일정</Link>
+                    </p>
+                  )}
                   <p className="event-meta">{formatTimeRange(event)}</p>
                   {event.memo && <p className="event-memo">{event.memo}</p>}
                   {event.attendeeIds.length > 0 && (

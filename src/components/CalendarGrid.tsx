@@ -46,7 +46,7 @@ export function CalendarGrid({ month, weeks, eventsByDate, today, selected }: Pr
                   >
                     <span className="cal-day">{cell.day}</span>
                     {shown.map((event) => (
-                      <span key={event.id} className="cal-event">
+                      <span key={event.id} className={event.meetupId === null ? "cal-event" : "cal-event meetup"}>
                         {event.title}
                       </span>
                     ))}

@@ -321,6 +321,140 @@ a {
   gap: 0.5rem;
 }
 
+.cal-event.meetup {
+  background: #dafbe1;
+  color: #116329;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.tabs a {
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.tabs a[aria-current="page"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.person-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.chip {
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+}
+
+.chip.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.slot-scroll {
+  margin: 0.75rem 0;
+  overflow-x: auto;
+}
+
+.slot-grid {
+  border-collapse: separate;
+  border-spacing: 2px;
+  user-select: none;
+}
+
+.slot-grid th {
+  padding: 0 0.3rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.slot-time {
+  text-align: right;
+}
+
+.slot {
+  display: block;
+  width: 2.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--code-bg);
+  font-size: 0.7rem;
+  touch-action: manipulation;
+}
+
+.slot.on {
+  border-color: #2da44e;
+  background: #2da44e;
+}
+
+.slot:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.slot.heat-1 {
+  background: #d2f4dc;
+}
+
+.slot.heat-2 {
+  background: #9be9a8;
+}
+
+.slot.heat-3 {
+  background: #40c463;
+  color: #fff;
+}
+
+.slot.heat-4 {
+  background: #216e39;
+  color: #fff;
+}
+
+.slot.picked {
+  outline: 2px solid var(--accent);
+}
+
+.heat-detail {
+  min-height: 4rem;
+}
+
+.heat-detail p {
+  margin: 0.2rem 0;
+}
+
+.reco-list {
+  margin: 0.25rem 0 1rem;
+  padding-left: 1.2rem;
+}
+
+.reco-list li {
+  padding: 0.15rem 0;
+}
+
+.confirm-panel select {
+  padding: 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+}
+
 .meetup-list {
   margin: 0 0 1rem;
   padding: 0;

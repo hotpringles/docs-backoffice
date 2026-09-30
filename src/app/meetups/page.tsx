@@ -7,6 +7,8 @@ import { listMeetups, type MeetupRecord } from "@/lib/meetups/store";
 import { meetupRangeLabel } from "@/lib/meetups/view";
 
 export const metadata = { title: "모임" };
+// 목록과 편집 권한은 요청마다 달라진다. 빌드할 때 환경 변수가 없으면 "설정 안 됨" 화면이 그대로 굳어 버리므로 항상 요청 때 그린다.
+export const dynamic = "force-dynamic";
 
 function MeetupList({ meetups, empty }: { meetups: MeetupRecord[]; empty: string }) {
   if (meetups.length === 0) return <p className="empty">{empty}</p>;
