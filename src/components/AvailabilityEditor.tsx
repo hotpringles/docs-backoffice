@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, typ
 import { shortDayLabel } from "@/lib/calendar/view";
 import { saveAvailability } from "@/lib/meetups/client";
 import { cellKey } from "@/lib/meetups/slots";
+import { createTouchPainter } from "@/lib/meetups/touchPaint";
 import { paintKeys, sameKeys, slotLabels, sortedKeys, toggleColumn } from "@/lib/meetups/view";
 import type { Person } from "@/lib/people";
 
@@ -59,6 +60,15 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const drag = useRef<{ on: boolean } | null>(null);
   const lastPointer = useRef("mouse");
+  const gridRef = useRef<HTMLDivElement>(null);
+  // 터치 이벤트 리스너는 한 번만 달아 두므로, 그 안에서 쓰는 최신 값은 이 상자로 넘긴다(렌더가 끝난 뒤에 채운다).
+  const latest = useRef<{ editable: boolean; currentSet: Set<string>; paint: (keys: string[], on: boolean) => void }>({
+    editable: false,
+    currentSet: new Set(),
+    paint: () => {},
+  });
+  // 꾹 눌러 끌어서 칠한 직후에 따라오는 탭(클릭)이 시작한 칸을 다시 뒤집지 않게 한다.
+  const ignoreClickUntil = useRef(0);
 
   // 이 기기에서 마지막으로 고른 이름이 명단에 아직 있으면 처음부터 골라 둔다. 사용자가 고르면 그 선택이 우선이다.
   const personId = chosen ?? (remembered !== null && people.some((person) => person.id === remembered) ? remembered : null);
@@ -95,6 +105,61 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
     setMessage(null);
   }
 
+  useEffect(() => {
+    latest.current = { editable, currentSet, paint };
+  });
+
+  // 폰: 칸을 꾹(0.3초) 누른 채 끌면 칠하고, 그냥 끌면 스크롤이다. 칠하는 동안만 스크롤을 막아야 해서,
+  // 기본이 수동적(passive)인 React의 터치 핸들러 대신 직접 리스너를 단다.
+  useEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    const keyAt = (x: number, y: number): string | null => {
+      const element = document.elementFromPoint(x, y);
+      return element?.closest<HTMLElement>("[data-key]")?.dataset.key ?? null;
+    };
+    const painter = createTouchPainter({
+      begin: (key) => !latest.current.currentSet.has(key),
+      paint: (keys, on) => latest.current.paint(keys, on),
+    });
+    const onTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!latest.current.editable || event.touches.length !== 1 || !touch) {
+        painter.cancel();
+        return;
+      }
+      painter.start(touch.clientX, touch.clientY, keyAt(touch.clientX, touch.clientY));
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (event.touches.length !== 1 || !touch) {
+        painter.cancel();
+        return;
+      }
+      const painting = painter.move(touch.clientX, touch.clientY, keyAt(touch.clientX, touch.clientY));
+      if (painting && event.cancelable) event.preventDefault();
+    };
+    const onTouchEnd = (event: TouchEvent) => {
+      // 시각은 이벤트가 알려 주는 것(timeStamp)을 쓴다. 클릭 이벤트의 timeStamp와 같은 시계다.
+      if (painter.end()) ignoreClickUntil.current = event.timeStamp + 500;
+    };
+    const onContextMenu = (event: Event) => {
+      if (latest.current.editable) event.preventDefault(); // 길게 눌렀을 때 메뉴가 뜨지 않게
+    };
+    grid.addEventListener("touchstart", onTouchStart, { passive: true });
+    grid.addEventListener("touchmove", onTouchMove, { passive: false });
+    grid.addEventListener("touchend", onTouchEnd);
+    grid.addEventListener("touchcancel", () => painter.cancel());
+    grid.addEventListener("contextmenu", onContextMenu);
+    return () => {
+      painter.cancel();
+      grid.removeEventListener("touchstart", onTouchStart);
+      grid.removeEventListener("touchmove", onTouchMove);
+      grid.removeEventListener("touchend", onTouchEnd);
+      grid.removeEventListener("contextmenu", onContextMenu);
+    };
+  }, []);
+
   function toggleDay(day: string) {
     if (!personId) return;
     setEdits((previous) => ({ ...previous, [personId]: toggleColumn(previous[personId] ?? saved[personId] ?? [], day, slotCount) }));
@@ -115,7 +180,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
   }
 
   function onClick(event: MouseEvent<HTMLButtonElement>, key: string) {
-    if (!editable) return;
+    if (!editable || event.timeStamp < ignoreClickUntil.current) return;
     // 마우스는 위 pointerdown에서 이미 처리했다. 터치와 키보드(detail이 0)는 여기서 켜고 끈다.
     if (event.detail === 0 || lastPointer.current !== "mouse") paint([key], !currentSet.has(key));
   }
@@ -159,10 +224,12 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
       ) : personId === null ? (
         <p className="meta">먼저 위에서 내 이름을 골라 주세요.</p>
       ) : (
-        <p className="meta">칸을 눌러 가능한 시간을 표시하세요. 마우스는 끌어서 칠할 수 있고, 날짜를 누르면 그 날 전체를 켜고 꺼요.</p>
+        <p className="meta">
+          칸을 눌러 가능한 시간을 표시하세요. 마우스는 끌어서, 폰은 칸을 꾹 누른 채 끌어서 칠할 수 있어요(그냥 끌면 스크롤). 날짜를 누르면 그 날 전체를 켜고 꺼요.
+        </p>
       )}
 
-      <div className="slot-scroll">
+      <div className="slot-scroll" ref={gridRef}>
         <table className="slot-grid">
           <thead>
             <tr>
@@ -192,6 +259,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
                         className={on ? "slot on" : "slot"}
                         aria-pressed={on}
                         aria-label={`${shortDayLabel(day)} ${label}`}
+                        data-key={key}
                         disabled={!editable}
                         onPointerDown={(event) => onPointerDown(event, key)}
                         onPointerEnter={() => onPointerEnter(key)}

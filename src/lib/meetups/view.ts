@@ -47,6 +47,20 @@ export function paintKeys(current: string[], keys: string[], on: boolean): strin
   return [...next];
 }
 
+/**
+ * 끌다가 `from`에서 `to`로 옮겨 갔을 때 칠할 칸들. 같은 날이면 사이 칸까지 모두(빨리 끌어서 건너뛴 칸이 비지 않게),
+ * 다른 날로 넘어갔거나 이전 칸이 없으면 도착한 칸만이다.
+ */
+export function keysBetween(from: string | null, to: string): string[] {
+  const start = from === null ? null : parseCellKey(from);
+  const end = parseCellKey(to);
+  if (!start || !end || start.day !== end.day) return [to];
+  const step = start.slot <= end.slot ? 1 : -1;
+  const keys: string[] = [];
+  for (let slot = start.slot; slot !== end.slot + step; slot += step) keys.push(cellKey(end.day, slot));
+  return keys;
+}
+
 /** 날짜 머리글을 눌렀을 때: 그 날이 전부 켜져 있으면 모두 끄고, 아니면 모두 켠다. */
 export function toggleColumn(current: string[], day: string, count: number): string[] {
   return paintKeys(current, columnKeys(day, count), !isColumnSelected(current, day, count));

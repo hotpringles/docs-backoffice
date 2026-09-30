@@ -5,6 +5,7 @@ import {
   columnKeys,
   heatLevel,
   isColumnSelected,
+  keysBetween,
   meetupRangeLabel,
   paintKeys,
   recommendationLabel,
@@ -104,5 +105,30 @@ describe("sortedKeys / sameKeys", () => {
     expect(sameKeys(["a:1"], ["a:1", "a:2"])).toBe(false);
     expect(sameKeys([], [])).toBe(true);
     expect(sameKeys(["a:1", "a:1"], ["a:1"])).toBe(true);
+  });
+});
+
+describe("keysBetween", () => {
+  const key = (slot: number, day = "2026-10-07") => cellKey(day, slot);
+
+  it("같은 날이면 두 칸 사이의 칸을 모두 돌려준다(빨리 끌어서 건너뛴 칸까지)", () => {
+    expect(keysBetween(key(2), key(5))).toEqual([key(2), key(3), key(4), key(5)]);
+  });
+
+  it("거꾸로 끌어도 같은 칸들이다", () => {
+    expect(keysBetween(key(5), key(2))).toEqual([key(5), key(4), key(3), key(2)]);
+  });
+
+  it("같은 칸이면 그 칸 하나다", () => {
+    expect(keysBetween(key(3), key(3))).toEqual([key(3)]);
+  });
+
+  it("다른 날로 넘어가면 도착한 칸만이다(대각선 사이를 채우지 않는다)", () => {
+    expect(keysBetween(key(2), key(6, "2026-10-08"))).toEqual([key(6, "2026-10-08")]);
+  });
+
+  it("이전 칸이 없거나 알아볼 수 없는 키면 도착한 칸만이다", () => {
+    expect(keysBetween(null, key(4))).toEqual([key(4)]);
+    expect(keysBetween("엉뚱한 값", key(4))).toEqual([key(4)]);
   });
 });
