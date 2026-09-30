@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { AvailabilityEditor } from "@/components/AvailabilityEditor";
 import { Heatmap } from "@/components/Heatmap";
 import { MeetupAdmin } from "@/components/MeetupAdmin";
+import { MeetupTabs } from "@/components/MeetupTabs";
 import { hasEditSession } from "@/lib/auth/server";
 import { getDbOrNull } from "@/lib/db";
 import { getEvent, type EventRecord } from "@/lib/events/store";
@@ -90,63 +91,58 @@ export default async function MeetupPage({ params, searchParams }: Props) {
       </p>
       {!people.ok && <p className="banner">{people.error}</p>}
 
-      <nav className="tabs" aria-label="모임 화면">
-        <Link href={`/meetups/${id}`} aria-current={activeTab === "mine" ? "page" : undefined}>
-          내 시간
-        </Link>
-        <Link href={`/meetups/${id}?tab=all`} aria-current={activeTab === "all" ? "page" : undefined}>
-          전체 결과
-        </Link>
-      </nav>
-
-      {activeTab === "mine" ? (
-        <AvailabilityEditor
-          meetupId={id}
-          dates={meetup.dates}
-          dayStart={meetup.dayStart}
-          slotCount={count}
-          slotMinutes={meetup.slotMinutes}
-          people={roster}
-          availability={availability}
-          readOnly={meetup.status === "confirmed"}
-        />
-      ) : (
-        <>
-          <Heatmap
-            dates={meetup.dates}
-            dayStart={meetup.dayStart}
-            slotCount={count}
-            slotMinutes={meetup.slotMinutes}
-            cells={overlap.cells}
-            total={overlap.total}
-            people={roster}
-          />
-          <section className="group">
-            <h2>추천 시간</h2>
-            {overlap.recommendations.length === 0 ? (
-              <p className="empty">아직 함께 되는 시간이 없어요. 1시간(칸 2개) 이상 겹쳐야 추천해요.</p>
-            ) : (
-              <ol className="reco-list">
-                {overlap.recommendations.map((rec) => (
-                  <li key={`${rec.day}-${rec.startSlot}-${rec.endSlot}`}>{recommendationLabel(rec)}</li>
-                ))}
-              </ol>
-            )}
-          </section>
-          <MeetupAdmin
+      <MeetupTabs
+        initial={activeTab}
+        mine={
+          <AvailabilityEditor
             meetupId={id}
-            title={meetup.title}
-            status={meetup.status}
             dates={meetup.dates}
             dayStart={meetup.dayStart}
             slotCount={count}
             slotMinutes={meetup.slotMinutes}
-            recommendations={overlap.recommendations}
-            canEdit={canEdit}
-            confirmedOn={confirmedEvent?.date ?? null}
+            people={roster}
+            availability={availability}
+            readOnly={meetup.status === "confirmed"}
           />
-        </>
-      )}
+        }
+        all={
+          <>
+            <Heatmap
+              dates={meetup.dates}
+              dayStart={meetup.dayStart}
+              slotCount={count}
+              slotMinutes={meetup.slotMinutes}
+              cells={overlap.cells}
+              total={overlap.total}
+              people={roster}
+            />
+            <section className="group">
+              <h2>추천 시간</h2>
+              {overlap.recommendations.length === 0 ? (
+                <p className="empty">아직 함께 되는 시간이 없어요. 1시간(칸 2개) 이상 겹쳐야 추천해요.</p>
+              ) : (
+                <ol className="reco-list">
+                  {overlap.recommendations.map((rec) => (
+                    <li key={`${rec.day}-${rec.startSlot}-${rec.endSlot}`}>{recommendationLabel(rec)}</li>
+                  ))}
+                </ol>
+              )}
+            </section>
+            <MeetupAdmin
+              meetupId={id}
+              title={meetup.title}
+              status={meetup.status}
+              dates={meetup.dates}
+              dayStart={meetup.dayStart}
+              slotCount={count}
+              slotMinutes={meetup.slotMinutes}
+              recommendations={overlap.recommendations}
+              canEdit={canEdit}
+              confirmedOn={confirmedEvent?.date ?? null}
+            />
+          </>
+        }
+      />
     </main>
   );
 }

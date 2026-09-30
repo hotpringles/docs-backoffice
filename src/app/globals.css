@@ -332,7 +332,8 @@ a {
   margin: 1rem 0;
 }
 
-.tabs a {
+.tabs a,
+.tabs button {
   padding: 0.35rem 0.9rem;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -340,7 +341,8 @@ a {
   text-decoration: none;
 }
 
-.tabs a[aria-current="page"] {
+.tabs a[aria-current="page"],
+.tabs button[aria-pressed="true"] {
   border-color: var(--accent);
   background: var(--accent);
   color: #fff;
