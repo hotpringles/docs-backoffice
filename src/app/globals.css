@@ -601,6 +601,32 @@ body:has(.cal-page) {
   padding: 1.5rem clamp(16px, 3vw, 48px) 4rem;
 }
 
+/* 제목 줄: 제목은 왼쪽, 수정·삭제는 오른쪽 끝. */
+.meetup-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.meetup-head h1 {
+  min-width: 0;
+  margin: 0.5rem 0 1rem;
+  font-size: 1.75rem;
+  overflow-wrap: anywhere;
+}
+
+.meetup-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.meetup-actions-error {
+  margin: 0 0 0.5rem;
+}
+
 .meetup-page .crumb-back {
   color: var(--muted);
   font-size: 0.9rem;

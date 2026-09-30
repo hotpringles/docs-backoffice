@@ -2,14 +2,14 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { MAX_TITLE_LENGTH } from "@/lib/events/validate";
 import { shortDayLabel } from "@/lib/calendar/view";
 import { createMeetup } from "@/lib/meetups/client";
 import { defaultMeetupDates, meetupDateWindow } from "@/lib/meetups/slots";
 import { CodeForm } from "./CodeForm";
+import { MeetupFields, type MeetupFormValue } from "./MeetupFields";
 import { useEditGate } from "./useEditGate";
 
-type Form = { title: string; startDate: string; endDate: string; dayStart: string; dayEnd: string };
+type Form = MeetupFormValue;
 /** 코드를 확인한 뒤 이어서 할 일. "resume"은 작성 중이던 폼으로 돌아간다. */
 type Action = "open" | "resume";
 
@@ -95,38 +95,11 @@ export function MeetupCreator({ canEdit, today }: { canEdit: boolean; today: str
 
   return (
     <form className="event-form meetup-form" onSubmit={submit}>
-      <label>
-        제목
-        <input type="text" value={form.title} maxLength={MAX_TITLE_LENGTH} onChange={(e) => patch({ title: e.target.value })} required />
-        {fieldErrors.title && <span className="field-error">{fieldErrors.title}</span>}
-      </label>
-
-      <div className="field-row">
-        <label>
-          후보 날짜 시작
-          <input type="date" value={form.startDate} min={range.min} max={range.max} onChange={(e) => patch({ startDate: e.target.value })} required />
-        </label>
-        <label>
-          후보 날짜 끝
-          <input type="date" value={form.endDate} min={form.startDate || range.min} max={range.max} onChange={(e) => patch({ endDate: e.target.value })} required />
-        </label>
-      </div>
-      {fieldErrors.dates && <span className="field-error">{fieldErrors.dates}</span>}
-
-      <div className="field-row">
-        <label>
-          하루 시작
-          <input type="time" step={1800} value={form.dayStart} onChange={(e) => patch({ dayStart: e.target.value })} required />
-        </label>
-        <label>
-          하루 끝
-          <input type="time" step={1800} value={form.dayEnd} onChange={(e) => patch({ dayEnd: e.target.value })} required />
-        </label>
-      </div>
-      {fieldErrors.time && <span className="field-error">{fieldErrors.time}</span>}
-      <p className="meta">
-        후보 날짜는 오늘부터 일주일 뒤({shortDayLabel(range.max)})까지 고를 수 있고, 시간은 30분 단위예요.
-      </p>
+      <MeetupFields value={form} onChange={patch} minDate={range.min} maxDate={range.max} fieldErrors={fieldErrors}>
+        <p className="meta">
+          후보 날짜는 오늘부터 일주일 뒤({shortDayLabel(range.max)})까지 고를 수 있고, 시간은 30분 단위예요.
+        </p>
+      </MeetupFields>
 
       <div className="form-actions">
         <button type="submit" disabled={busy}>

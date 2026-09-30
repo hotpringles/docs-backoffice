@@ -206,9 +206,12 @@ export function MeetupAdmin({ meetupId, title, status, dates, dayStart, slotCoun
               시간 확정
             </button>
           )}
-          <button type="button" onClick={() => gate.run("delete")} disabled={busy}>
-            모임 삭제
-          </button>
+          {/* 열린 모임의 수정·삭제는 모임 제목 옆에 있다. 확정된 모임은 여기서만 지울 수 있다. */}
+          {status === "confirmed" && (
+            <button type="button" onClick={() => gate.run("delete")} disabled={busy}>
+              모임 삭제
+            </button>
+          )}
         </div>
       )}
 

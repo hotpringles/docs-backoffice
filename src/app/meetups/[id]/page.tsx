@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { AvailabilityEditor } from "@/components/AvailabilityEditor";
 import { Heatmap } from "@/components/Heatmap";
 import { MeetupAdmin } from "@/components/MeetupAdmin";
+import { MeetupHeaderActions } from "@/components/MeetupHeaderActions";
 import { MeetupTabs } from "@/components/MeetupTabs";
 import { hasEditSession } from "@/lib/auth/server";
 import { getDbOrNull } from "@/lib/db";
+import { todayInSeoul } from "@/lib/events/dates";
 import { getEvent, type EventRecord } from "@/lib/events/store";
 import { computeOverlap } from "@/lib/meetups/overlap";
 import { slotCount } from "@/lib/meetups/slots";
@@ -84,14 +86,19 @@ export default async function MeetupPage({ params, searchParams }: Props) {
       <p>
         <Link href="/meetups" className="crumb-back">‹ 모임 목록</Link>
       </p>
-      <h1>{meetup.title}</h1>
+      <div className="meetup-head">
+        <h1>{meetup.title}</h1>
+        {meetup.status === "open" && <MeetupHeaderActions meetup={meetup} canEdit={canEdit} today={todayInSeoul()} />}
+      </div>
       <p className="meta">
         {meetupRangeLabel(meetup.dates)} · 하루 {meetup.dayStart}–{meetup.dayEnd} · {meetup.status === "confirmed" ? "확정됨" : "열린 모임"} ·{" "}
         {responded}/{roster.length}명이 표시했어요
       </p>
       {!people.ok && <p className="banner">{people.error}</p>}
 
+      {/* 날짜나 하루 범위가 수정되면 표를 새로 시작한다(표 안의 상태가 옛 모양에 남아 있으면 안 된다). */}
       <MeetupTabs
+        key={`${meetup.dates.join(",")}|${meetup.dayStart}|${meetup.dayEnd}`}
         initial={activeTab}
         mine={
           <AvailabilityEditor

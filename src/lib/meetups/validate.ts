@@ -46,10 +46,12 @@ function blankToNull(value: unknown): string | null | undefined {
 }
 
 /**
- * 새 모임 입력을 검사한다. 하루 범위를 비우면 09:00~22:00이다.
+ * 모임 입력(만들기와 수정)을 검사한다. 하루 범위를 비우면 09:00~22:00이다.
  * 후보 날짜는 `today`(서울 기준 오늘)부터 7일 뒤까지만 고를 수 있다.
+ * 수정할 때는 `keepDates`(그 모임에 이미 들어 있던 날짜)를 넘긴다. 이미 지난 날짜라도 그대로 둔 것은 받아 주고,
+ * 새로 더하는 날짜만 위 범위를 지켜야 한다. (지난 날이 낀 모임의 제목만 고치려는데 거절되면 곤란하기 때문이다.)
  */
-export function validateMeetupInput(raw: unknown, today: string): Result<MeetupInput> {
+export function validateMeetupInput(raw: unknown, today: string, keepDates: string[] = []): Result<MeetupInput> {
   if (!isRecord(raw)) return { ok: false, errors: notObject };
   const errors: MeetupFieldErrors = {};
 
@@ -62,7 +64,7 @@ export function validateMeetupInput(raw: unknown, today: string): Result<MeetupI
   const dates = datesInRange(startDate, endDate);
   const window = meetupDateWindow(today);
   if (!dates) errors.dates = "후보 날짜는 시작일부터 끝일까지예요. 날짜를 YYYY-MM-DD로 입력하고, 끝일이 시작일보다 빠르면 안 돼요.";
-  else if (dates[0] < window.min || dates[dates.length - 1] > window.max) {
+  else if (dates.some((date) => (date < window.min || date > window.max) && !keepDates.includes(date))) {
     errors.dates = `후보 날짜는 오늘(${shortDayLabel(window.min)})부터 일주일 뒤(${shortDayLabel(window.max)})까지만 고를 수 있어요.`;
   }
 

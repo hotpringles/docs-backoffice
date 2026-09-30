@@ -14,3 +14,7 @@ export const confirmMeetup = (fetchImpl: typeof fetch, id: number, payload: Reco
 /** 가능한 시간 저장(편집 코드 필요 없음). `cells`는 "2026-10-07:4" 모양의 칸 키 목록이고, 그 사람의 칸이 통째로 바뀐다. */
 export const saveAvailability = (fetchImpl: typeof fetch, id: number, personId: string, cells: string[]) =>
   postJson<{ ok: true; count: number }>(fetchImpl, `/api/meetups/${id}/availability`, { personId, cells });
+
+/** 열린 모임의 제목, 후보 날짜, 하루 범위 수정(편집 코드 필요). */
+export const updateMeetup = (fetchImpl: typeof fetch, id: number, payload: Record<string, unknown>) =>
+  postJson<{ ok: true }>(fetchImpl, `/api/meetups/${id}/update`, payload);

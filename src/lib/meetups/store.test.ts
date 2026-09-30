@@ -3,7 +3,17 @@ import { createTestDb } from "@/lib/db/testing";
 import type { Db } from "@/lib/db/types";
 import { getEvent, listEventsInRange } from "@/lib/events/store";
 import type { Person } from "@/lib/people";
-import { confirmMeetup, createMeetup, deleteMeetup, getMeetup, getMeetupEventId, listAvailability, listMeetups, saveAvailability } from "./store";
+import {
+  confirmMeetup,
+  createMeetup,
+  deleteMeetup,
+  getMeetup,
+  getMeetupEventId,
+  listAvailability,
+  listMeetups,
+  saveAvailability,
+  updateMeetup,
+} from "./store";
 import { cellKey } from "./slots";
 import type { ConfirmInput, MeetupInput } from "./validate";
 
@@ -228,5 +238,66 @@ describe("getMeetupEventId / deleteMeetup", () => {
     await saveAvailability(db, id, "p1", cells(D1, [0]));
     expect(await deleteMeetup(db, id)).toBe(true);
     expect(await listMeetups(db)).toEqual([]);
+  });
+});
+
+describe("updateMeetup", () => {
+  const D3 = "2026-10-09";
+
+  it("열린 모임의 제목, 날짜, 하루 범위를 바꾸고 true다", async () => {
+    const id = await createMeetup(db, input);
+    const changed = await updateMeetup(db, id, { title: "바뀐 제목", dates: [D1, D2, D3], dayStart: "10:00", dayEnd: "14:00" }, { clearAvailability: false });
+    expect(changed).toBe(true);
+    expect(await getMeetup(db, id)).toMatchObject({ title: "바뀐 제목", status: "open", dates: [D1, D2, D3], dayStart: "10:00", dayEnd: "14:00" });
+  });
+
+  it("제목만 바꾸면 이미 표시한 가능한 시간은 그대로 남는다", async () => {
+    const id = await createMeetup(db, input);
+    await saveAvailability(db, id, "p1", cells(D1, [2, 3]));
+    await saveAvailability(db, id, "p2", cells(D2, [0]));
+    await updateMeetup(db, id, { ...input, title: "제목만" }, { clearAvailability: false });
+    expect(await listAvailability(db, id)).toEqual({ p1: [cellKey(D1, 2), cellKey(D1, 3)], p2: [cellKey(D2, 0)] });
+  });
+
+  it("날짜를 줄이면 빠진 날짜의 칸만, 하루 끝을 줄이면 범위 밖 칸만 지워지고 나머지는 남는다", async () => {
+    const id = await createMeetup(db, input); // 09:00~13:00 = 칸 8개(0~7)
+    await saveAvailability(db, id, "p1", [...cells(D1, [1, 6]), ...cells(D2, [2])]);
+    await updateMeetup(db, id, { title: input.title, dates: [D1], dayStart: "09:00", dayEnd: "11:00" }, { clearAvailability: false }); // 칸 4개(0~3), 10/7만
+    expect(await listAvailability(db, id)).toEqual({ p1: [cellKey(D1, 1)] });
+  });
+
+  it("clearAvailability가 true면 모든 사람의 칸을 지운다(하루 시작 시각을 바꾸면 칸 번호의 뜻이 달라지기 때문이다)", async () => {
+    const id = await createMeetup(db, input);
+    await saveAvailability(db, id, "p1", cells(D1, [1, 2]));
+    await saveAvailability(db, id, "p2", cells(D2, [3]));
+    await updateMeetup(db, id, { ...input, dayStart: "08:00" }, { clearAvailability: true });
+    expect(await listAvailability(db, id)).toEqual({});
+  });
+
+  it("다른 모임의 가능한 시간은 건드리지 않는다", async () => {
+    const a = await createMeetup(db, input);
+    const b = await createMeetup(db, input);
+    await saveAvailability(db, a, "p1", cells(D1, [1]));
+    await saveAvailability(db, b, "p1", cells(D1, [1, 7]));
+    await updateMeetup(db, a, { title: "A", dates: [D2], dayStart: "09:00", dayEnd: "10:00" }, { clearAvailability: true });
+    expect(await listAvailability(db, a)).toEqual({});
+    expect(await listAvailability(db, b)).toEqual({ p1: [cellKey(D1, 1), cellKey(D1, 7)] });
+  });
+
+  it("확정된 모임과 없는 모임은 바꾸지 않고 false다(가능한 시간도 지우지 않는다)", async () => {
+    const id = await createMeetup(db, input);
+    await saveAvailability(db, id, "p1", cells(D1, [2, 3, 4]));
+    await confirmMeetup(db, id, span, roster);
+    expect(await updateMeetup(db, id, { ...input, title: "확정 뒤 수정" }, { clearAvailability: true })).toBe(false);
+    expect(await getMeetup(db, id)).toMatchObject({ title: input.title, status: "confirmed" });
+    expect(await listAvailability(db, id)).toEqual({ p1: [cellKey(D1, 2), cellKey(D1, 3), cellKey(D1, 4)] });
+    expect(await updateMeetup(db, 999, input, { clearAvailability: false })).toBe(false);
+  });
+
+  it("제목에 홑따옴표 같은 글자가 있어도 안전하게 저장한다(값은 항상 매개변수로 넘긴다)", async () => {
+    const id = await createMeetup(db, input);
+    await updateMeetup(db, id, { ...input, title: "a'); drop table meetups;--" }, { clearAvailability: false });
+    expect((await getMeetup(db, id))?.title).toBe("a'); drop table meetups;--");
+    expect(await listMeetups(db)).toHaveLength(1);
   });
 });

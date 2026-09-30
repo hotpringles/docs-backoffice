@@ -85,6 +85,29 @@ describe("validateMeetupInput", () => {
     if (!result.ok) expect(result.errors.dates).toBe("후보 날짜는 오늘(10/7(수))부터 일주일 뒤(10/14(수))까지만 고를 수 있어요.");
   });
 
+  it("수정할 때는 이미 모임에 들어 있던 날짜(keep)는 범위 밖이어도 그대로 둘 수 있다", () => {
+    // 오늘 10/7. 모임은 10/5~10/8이었다(10/5, 10/6은 이미 지난 날).
+    const keep = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08"];
+    const same = validateMeetupInput({ title: "새 제목", startDate: "2026-10-05", endDate: "2026-10-08" }, TODAY, keep);
+    expect(same.ok).toBe(true);
+    const shrink = validateMeetupInput({ title: "a", startDate: "2026-10-06", endDate: "2026-10-07" }, TODAY, keep);
+    expect(shrink.ok).toBe(true);
+  });
+
+  it("수정할 때도 새로 더하는 날짜는 오늘부터 7일 뒤까지여야 한다", () => {
+    const keep = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08"];
+    // 10/4는 지난 날이고 keep에도 없다
+    expect(validateMeetupInput({ title: "a", startDate: "2026-10-04", endDate: "2026-10-08" }, TODAY, keep).ok).toBe(false);
+    // 10/15는 7일 뒤(10/14)를 넘는다
+    expect(validateMeetupInput({ title: "a", startDate: "2026-10-05", endDate: "2026-10-15" }, TODAY, keep).ok).toBe(false);
+    // 범위 안의 새 날짜(10/9~10/14)는 더할 수 있다
+    expect(validateMeetupInput({ title: "a", startDate: "2026-10-05", endDate: "2026-10-12" }, TODAY, keep).ok).toBe(true);
+  });
+
+  it("keep이 없으면(새로 만들 때) 지난 날짜는 그대로 거절한다", () => {
+    expect(validateMeetupInput({ title: "a", startDate: "2026-10-05", endDate: "2026-10-08" }, TODAY).ok).toBe(false);
+  });
+
   it("오늘이 바뀌면 고를 수 있는 범위도 함께 움직인다", () => {
     const dates = { startDate: "2026-10-20", endDate: "2026-10-21" };
     expect(validateMeetupInput({ title: "a", ...dates }, "2026-10-07").ok).toBe(false);

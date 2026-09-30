@@ -310,6 +310,83 @@ describe("confirm", () => {
   });
 });
 
+describe("update", () => {
+  const D3 = "2026-10-09";
+  const EDIT = { title: "바뀐 제목", startDate: D1, endDate: D3, dayStart: "09:00", dayEnd: "13:00" };
+
+  it("편집 권한이 있으면 열린 모임의 제목, 날짜, 하루 범위를 바꾸고 알림은 보내지 않는다", async () => {
+    const id = await openMeetup();
+    const response = await createMeetupHandlers(deps()).update(post(EDIT), String(id));
+    expect(response.status).toBe(200);
+    expect(await getMeetup(db, id)).toMatchObject({ title: "바뀐 제목", dates: [D1, D2, D3], dayStart: "09:00", dayEnd: "13:00" });
+    expect(scheduled).toEqual([]);
+    expect(sender).not.toHaveBeenCalled();
+  });
+
+  it("편집 권한이 없으면 401이고 아무것도 바뀌지 않는다(본문이 이상해도 인증이 먼저다)", async () => {
+    const id = await openMeetup();
+    expect((await createMeetupHandlers(deps()).update(post(EDIT, {}), String(id))).status).toBe(401);
+    expect((await createMeetupHandlers(deps()).update(post("{oops", { cookie: `${SESSION_COOKIE}=garbage` }), String(id))).status).toBe(401);
+    expect((await getMeetup(db, id))?.title).toBe("스터디 일정");
+  });
+
+  it("하루 시작 시각을 바꾸면 이미 표시한 가능한 시간이 모두 지워지고, 끝 시각·날짜만 줄이면 범위 밖 칸만 지워진다", async () => {
+    const id = await openMeetup();
+    await saveAvailability(db, id, "p1", [...cells(D1, [1, 6]), ...cells(D2, [2])]);
+    const handlers = createMeetupHandlers(deps());
+
+    // 끝 시각과 날짜를 줄임: 09:00~11:00(칸 0~3), 10/7만
+    await handlers.update(post({ ...EDIT, endDate: D1, dayEnd: "11:00" }), String(id));
+    expect(await listAvailability(db, id)).toEqual({ p1: [cellKey(D1, 1)] });
+
+    // 시작 시각을 바꿈: 전부 지운다
+    await handlers.update(post({ ...EDIT, endDate: D1, dayStart: "08:30", dayEnd: "11:00" }), String(id));
+    expect(await listAvailability(db, id)).toEqual({});
+  });
+
+  it("제목만 바꾸면 가능한 시간이 그대로 남는다", async () => {
+    const id = await openMeetup();
+    await saveAvailability(db, id, "p2", cells(D2, [0, 5]));
+    await createMeetupHandlers(deps()).update(post({ ...EDIT, endDate: D2 }), String(id));
+    expect(await listAvailability(db, id)).toEqual({ p2: [cellKey(D2, 0), cellKey(D2, 5)] });
+  });
+
+  it("이미 지난 날짜가 들어 있는 모임도 그 날짜를 그대로 두면 수정된다. 새로 더하는 날짜는 오늘부터 7일 뒤까지여야 한다", async () => {
+    const id = await createMeetup(db, { title: "지난 날 포함", dates: ["2026-10-05", "2026-10-06", D1], dayStart: "09:00", dayEnd: "13:00" });
+    const handlers = createMeetupHandlers(deps());
+    expect((await handlers.update(post({ ...EDIT, title: "제목만", startDate: "2026-10-05", endDate: D1 }), String(id))).status).toBe(200);
+    expect((await handlers.update(post({ ...EDIT, startDate: "2026-10-04", endDate: D1 }), String(id))).status).toBe(400); // 10/4는 새로 더하는 지난 날
+    expect((await handlers.update(post({ ...EDIT, startDate: "2026-10-05", endDate: "2026-10-15" }), String(id))).status).toBe(400); // 7일 뒤를 넘김
+    expect((await getMeetup(db, id))?.title).toBe("제목만");
+  });
+
+  it("입력이 틀리면 400과 필드별 메시지를 주고 바꾸지 않는다", async () => {
+    const id = await openMeetup();
+    const response = await createMeetupHandlers(deps()).update(post({ title: "", startDate: "abc", endDate: "abc", dayStart: "09:15" }), String(id));
+    expect(response.status).toBe(400);
+    expect(Object.keys((await response.json()).errors).sort()).toEqual(["dates", "time", "title"]);
+    expect(await getMeetup(db, id)).toMatchObject({ title: "스터디 일정", dayStart: "09:00" });
+  });
+
+  it("확정된 모임은 409이고 바뀌지 않는다. 없는 모임이나 이상한 번호는 404다", async () => {
+    const id = await openMeetup();
+    await confirmMeetup(db, id, { day: D1, startSlot: 2, endSlot: 5, startTime: "10:00", endTime: "11:30", remindOffsets: [0] }, []);
+    const handlers = createMeetupHandlers(deps());
+    expect((await handlers.update(post(EDIT), String(id))).status).toBe(409);
+    expect((await getMeetup(db, id))?.title).toBe("스터디 일정");
+    expect((await handlers.update(post(EDIT), "999")).status).toBe(404);
+    for (const raw of ["0", "-1", "01", "1.5", "abc", "9999999999"]) {
+      expect((await handlers.update(post(EDIT), raw)).status, raw).toBe(404);
+    }
+  });
+
+  it("JSON이 아니면 415이고, 데이터베이스가 없으면 503이다", async () => {
+    const id = await openMeetup();
+    expect((await createMeetupHandlers(deps()).update(post("title=x", { cookie: COOKIE }, "text/plain"), String(id))).status).toBe(415);
+    expect((await createMeetupHandlers(deps({ getDb: () => null })).update(post(EDIT), String(id))).status).toBe(503);
+  });
+});
+
 describe("remove", () => {
   it("편집 권한이 없으면 401이고 모임이 그대로다", async () => {
     const id = await openMeetup();

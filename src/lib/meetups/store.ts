@@ -1,6 +1,6 @@
 import type { Db } from "@/lib/db/types";
 import type { Person } from "@/lib/people";
-import { cellKey } from "./slots";
+import { cellKey, slotCount } from "./slots";
 import type { Cell, ConfirmInput, MeetupInput } from "./validate";
 
 export type MeetupStatus = "open" | "confirmed";
@@ -66,6 +66,34 @@ export async function getMeetup(db: Db, id: number): Promise<MeetupRecord | null
 export async function listMeetups(db: Db): Promise<MeetupRecord[]> {
   const rows = await db.query<MeetupRow>(`${SELECT_MEETUP} order by (m.status = 'open') desc, m.created_at desc, m.id desc`);
   return rows.map(toRecord);
+}
+
+/**
+ * 열린 모임의 제목, 날짜, 하루 범위를 바꾼다. 바뀌었으면 true, 없는 모임이거나 이미 확정됐으면 false(아무것도 바꾸지 않는다).
+ * 이미 표시된 가능한 시간은 새 범위(날짜 목록, 칸 개수)를 벗어난 것만 지운다. `clearAvailability`가 true면 전부 지운다.
+ * 하루 시작 시각이 바뀌면 칸 번호(0번 = 시작 시각)의 뜻이 달라져서, 남겨 두면 엉뚱한 시간으로 읽히기 때문이다.
+ * 모임 수정과 가능한 시간 정리는 한 문장(CTE)이라서 중간에 어긋나지 않는다.
+ */
+export async function updateMeetup(db: Db, id: number, input: MeetupInput, options: { clearAvailability: boolean }): Promise<boolean> {
+  const rows = await db.query<{ id: number }>(
+    `with upd as (
+       update meetups
+          set title = $2, dates = $3::date[], day_start = $4::time, day_end = $5::time
+        where id = $1 and status = 'open'
+        returning id
+     ), pruned as (
+       delete from availability a
+        using upd
+        where a.meetup_id = upd.id
+          and ($6::boolean
+               or not (a.day = any($3::date[]))
+               or a.slot >= $7::int)
+        returning 1
+     )
+     select id from upd`,
+    [id, input.title, input.dates, input.dayStart, input.dayEnd, options.clearAvailability, slotCount(input.dayStart, input.dayEnd)],
+  );
+  return rows.length > 0;
 }
 
 /** 모임을 지운다(가능한 시간은 함께 지워지고, 확정으로 만든 일정은 남고 모임 연결만 비워진다). 없으면 false. */
