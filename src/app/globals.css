@@ -932,7 +932,7 @@ body:has(.cal-page) {
  * 좁은 화면(태블릿·폰)에서는 나란히 둘 자리가 없어서 목차가 본문 위에 놓인다.
  */
 .page.doc-page {
-  max-width: 80rem;
+  max-width: 84rem;
 }
 
 .doc-layout {
@@ -970,8 +970,8 @@ body:has(.cal-page) {
     grid-column: 1;
     grid-row: 1;
     justify-self: end;
-    margin-right: 2.5rem; /* 본문과의 간격 */
-    width: min(15rem, calc(100% - 2.5rem));
+    margin-right: 3.5rem; /* 본문과의 간격 */
+    width: min(15rem, calc(100% - 3.5rem));
     position: sticky;
     top: 1.5rem;
     align-self: start;
