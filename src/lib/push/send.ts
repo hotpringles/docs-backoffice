@@ -9,6 +9,18 @@ export type Sender = (subscription: PushSubscriptionInput, payload: string) => P
 
 export type SendSummary = { total: number; sent: number; removed: number; failed: number };
 
+/** 알림을 보내는 쪽(일정 알림, 모임 알림)이 함께 쓰는 재료: 데이터베이스와 발송기. */
+export type PushDeps = { db: Db; sender: Sender };
+export type PushDepsResult = { ok: true; deps: PushDeps } | { ok: false; missing: string[] };
+
+/**
+ * 구독자가 있는데 한 명에게도 보내지 못했는지. (VAPID 키 오타처럼 설정 문제일 가능성이 크다.)
+ * 만료된 구독(404/410)만 정리한 경우와 구독자가 없는 경우는 실패로 보지 않는다.
+ */
+export function nothingDelivered(summary: SendSummary): boolean {
+  return summary.total > 0 && summary.sent === 0 && summary.failed > 0;
+}
+
 /** 푸시 서비스가 "이 구독은 더 이상 없다"고 답하는 상태 코드. 이때는 저장소에서 지운다. */
 const GONE_STATUS = new Set([404, 410]);
 const CONCURRENCY = 10;
