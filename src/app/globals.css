@@ -61,10 +61,17 @@ body {
   background: color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
+/* 링크는 평소에는 글자색(검정) 그대로이고, 마우스를 올리면 강조색과 밑줄로 눌러도 되는 곳이라는 걸 알린다. */
 a {
-  color: var(--accent);
+  color: inherit;
+  text-decoration: none;
   text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 :focus-visible {
@@ -122,6 +129,7 @@ h6 {
 
 .site-links a:hover {
   color: var(--fg);
+  text-decoration: underline;
 }
 
 .notify {
@@ -205,6 +213,11 @@ body:has(.cal-page) {
 .cal-nav h1 a {
   color: var(--fg);
   text-decoration: none;
+}
+
+.cal-nav h1 a:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 
 .cal-nav > a {
@@ -851,12 +864,14 @@ body:has(.cal-page) {
   font-size: 1rem;
 }
 
+/* 문서 본문 속 링크는 글 속에 묻히지 않도록 평소에도 옅은 밑줄을 둔다. */
 .markdown a {
-  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 30%, transparent);
 }
 
 .markdown a:hover {
-  text-decoration-color: var(--accent);
+  text-decoration-color: currentColor;
 }
 
 .markdown li {
