@@ -85,7 +85,9 @@ describe("실제 마이그레이션 파일", () => {
     const tables = await db.query<{ table_name: string }>(
       "select table_name from information_schema.tables where table_schema = 'public' order by table_name",
     );
-    expect(tables.map((t) => t.table_name)).toEqual(expect.arrayContaining(["push_subscriptions", "schema_migrations"]));
+    expect(tables.map((t) => t.table_name)).toEqual(
+      expect.arrayContaining(["push_subscriptions", "events", "sent_reminders", "auth_attempts", "schema_migrations"]),
+    );
     await close();
   });
 });
