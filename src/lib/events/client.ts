@@ -1,4 +1,4 @@
-import type { FieldErrors } from "./validate";
+// 일정과 모임 API가 함께 쓰는 fetch 도우미다.
 
 export type ApiOk<T> = { ok: true; data: T };
 export type ApiError = {
@@ -6,7 +6,7 @@ export type ApiError = {
   /** 0이면 네트워크 오류, 401이면 편집 코드를 다시 물어야 한다. */
   status: number;
   message: string;
-  fieldErrors?: FieldErrors;
+  fieldErrors?: Record<string, string>;
   retryAfterMinutes?: number;
 };
 export type ApiResult<T> = ApiOk<T> | ApiError;
@@ -32,7 +32,7 @@ async function post<T>(fetchImpl: typeof fetch, url: string, body: unknown): Pro
     ok: false,
     status: response.status,
     message: typeof record.error === "string" ? record.error : "요청을 처리하지 못했어요.",
-    ...(isRecord(record.errors) ? { fieldErrors: record.errors as FieldErrors } : {}),
+    ...(isRecord(record.errors) ? { fieldErrors: record.errors as Record<string, string> } : {}),
     ...(typeof record.retryAfterMinutes === "number" ? { retryAfterMinutes: record.retryAfterMinutes } : {}),
   };
 }
@@ -46,3 +46,6 @@ export const saveEvent = (fetchImpl: typeof fetch, id: number | null, payload: R
   post<{ id?: number }>(fetchImpl, id === null ? "/api/events" : `/api/events/${id}`, payload);
 
 export const deleteEvent = (fetchImpl: typeof fetch, id: number) => post<{ ok: true }>(fetchImpl, `/api/events/${id}/delete`, {});
+
+/** 모임 API 호출도 같은 방식으로 보낼 수 있게 내보낸다. */
+export { post as postJson };
