@@ -927,6 +927,53 @@ body:has(.cal-page) {
   font-size: 0.9rem;
 }
 
+/*
+ * 문서 화면: 넓은 화면에서는 목차(왼쪽)와 본문(오른쪽 700px)을 나란히 두고, 목차는 스크롤해도 화면에 붙어 따라온다(sticky).
+ * 좁은 화면(태블릿·폰)에서는 나란히 둘 자리가 없어서 목차가 본문 위에 놓인다.
+ */
+.page.doc-page {
+  max-width: 72rem;
+}
+
+.doc-layout {
+  display: block;
+}
+
+.doc-aside .toc {
+  margin-top: 0;
+}
+
+@media (min-width: 1100px) {
+  .doc-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 43.75rem);
+    gap: 3rem;
+    justify-content: center;
+  }
+
+  .doc-aside {
+    position: sticky;
+    top: 1.5rem;
+    align-self: start;
+    max-height: calc(100vh - 3rem);
+    max-height: calc(100dvh - 3rem);
+    overflow-y: auto;
+    /* 목차가 아주 길어도 화면 안에서 따로 스크롤된다. */
+    overscroll-behavior: contain;
+  }
+
+  .doc-aside .toc {
+    margin-bottom: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+  }
+
+  .doc-aside .toc li {
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+  }
+}
+
 .toc ul {
   list-style: none;
   margin: 0.4rem 0 0;

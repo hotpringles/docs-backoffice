@@ -50,40 +50,47 @@ export default async function DocPage({ params }: Props) {
 
   const { doc } = page;
   return (
-    <main className="page">
-      <p className="crumb">
-        <Link href="/">← 문서 목록</Link>
-      </p>
-      {!doc.hasH1 && <h1>{page.title}</h1>}
-      {(doc.frontmatter.date || doc.frontmatter.tags.length > 0) && (
-        <p className="meta">
-          {doc.frontmatter.date && <time dateTime={doc.frontmatter.date}>{doc.frontmatter.date}</time>}
-          {doc.frontmatter.tags.map((tag) => (
-            <span key={tag} className="tag">
-              #{tag}
-            </span>
-          ))}
-        </p>
-      )}
-      {page.stale && <StaleBanner />}
-      {doc.frontmatterError && (
-        <p className="banner" role="status">
-          문서 상단 정보(frontmatter)를 읽지 못해서 본문만 보여드려요.
-        </p>
-      )}
-      <Toc headings={doc.toc} />
-      <article className="markdown">
-        <MarkdownView
-          tree={doc.tree}
-          drawings={page.drawings}
-          sourceUrlFor={(path) => blobUrl(repo, path)}
-        />
-      </article>
-      <p className="meta footer-meta">
-        <a href={page.sourceUrl} target="_blank" rel="noopener noreferrer">
-          GitHub에서 보기
-        </a>
-      </p>
+    <main className="page doc-page">
+      <div className="doc-layout">
+        {/* 넓은 화면에서는 목차가 본문 왼쪽에 붙어(sticky) 스크롤해도 따라온다. 좁은 화면에서는 본문 위에 놓인다. */}
+        <aside className="doc-aside">
+          <Toc headings={doc.toc} />
+        </aside>
+        <div className="doc-main">
+          <p className="crumb">
+            <Link href="/">← 문서 목록</Link>
+          </p>
+          {!doc.hasH1 && <h1>{page.title}</h1>}
+          {(doc.frontmatter.date || doc.frontmatter.tags.length > 0) && (
+            <p className="meta">
+              {doc.frontmatter.date && <time dateTime={doc.frontmatter.date}>{doc.frontmatter.date}</time>}
+              {doc.frontmatter.tags.map((tag) => (
+                <span key={tag} className="tag">
+                  #{tag}
+                </span>
+              ))}
+            </p>
+          )}
+          {page.stale && <StaleBanner />}
+          {doc.frontmatterError && (
+            <p className="banner" role="status">
+              문서 상단 정보(frontmatter)를 읽지 못해서 본문만 보여드려요.
+            </p>
+          )}
+          <article className="markdown">
+            <MarkdownView
+              tree={doc.tree}
+              drawings={page.drawings}
+              sourceUrlFor={(path) => blobUrl(repo, path)}
+            />
+          </article>
+          <p className="meta footer-meta">
+            <a href={page.sourceUrl} target="_blank" rel="noopener noreferrer">
+              GitHub에서 보기
+            </a>
+          </p>
+        </div>
+      </div>
     </main>
   );
 }
