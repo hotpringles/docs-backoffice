@@ -133,7 +133,8 @@ h6 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 16px;
+  /* iPhone에서 위쪽 흐림(블러) 막이 머리글 위쪽을 살짝 가리므로, 위아래 여백을 넉넉히 둔다(노치·상태 표시줄 안전 영역도 함께 반영). */
+  padding: max(1.25rem, calc(env(safe-area-inset-top) + 0.75rem)) 16px 1.05rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -1303,6 +1304,46 @@ body:has(.cal-page) {
 .drawing-locked,
 .drawing-locked * {
   pointer-events: none !important;
+}
+
+/*
+ * 그림 전체화면. 같은 요소를 화면 전체에 고정해서(fixed) 덮는다: iPhone Safari는 임의의 요소를 브라우저 전체화면으로 만들 수 없다.
+ * z-index는 머리글·Excalidraw 메뉴보다 위에 오도록 크게 둔다.
+ */
+.drawing-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.drawing-overlay-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: max(0.6rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right)) 0.6rem max(1rem, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95rem;
+}
+
+.drawing-overlay-bar strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drawing-overlay .drawing-frame {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.drawing-overlay .drawing {
+  border: 0;
+  border-radius: 0;
 }
 
 .drawing-loading {

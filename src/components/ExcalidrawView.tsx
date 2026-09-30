@@ -12,10 +12,18 @@ const Excalidraw = dynamic(async () => (await import("@excalidraw/excalidraw")).
   loading: () => <p className="drawing-loading">그림을 불러오는 중…</p>,
 });
 
-type Props = { scene: ExcalidrawScene; height?: string };
+type Props = {
+  scene: ExcalidrawScene;
+  height?: string;
+  /** 이 값이 바뀌면(예: 전체화면으로 바뀌어 크기가 달라지면) 그림을 새 크기에 맞춰 다시 보여 준다. */
+  refitOn?: unknown;
+};
+
+const fitToViewport = (api: ExcalidrawImperativeAPI) =>
+  api.scrollToContent(undefined, { fitToViewport: true, viewportZoomFactor: 0.95 });
 
 /** 읽기 전용 Excalidraw 뷰어. 컨테이너에 높이가 있어야 그려진다. */
-export function ExcalidrawView({ scene, height = "70vh" }: Props) {
+export function ExcalidrawView({ scene, height = "70vh", refitOn }: Props) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null);
   const background =
     typeof scene.appState?.viewBackgroundColor === "string" ? scene.appState.viewBackgroundColor : "#ffffff";
@@ -24,11 +32,16 @@ export function ExcalidrawView({ scene, height = "70vh" }: Props) {
   // API 콜백이 불리는 시점에는 아직 마운트 전이라, 상태에 담아 둔 뒤 다음 프레임에 호출한다.
   useEffect(() => {
     if (!api) return;
-    const frame = requestAnimationFrame(() =>
-      api.scrollToContent(undefined, { fitToViewport: true, viewportZoomFactor: 0.95 }),
-    );
+    const frame = requestAnimationFrame(() => fitToViewport(api));
     return () => cancelAnimationFrame(frame);
   }, [api]);
+
+  // 전체화면으로 들어가거나 나오면 크기가 바뀌므로, 레이아웃이 자리 잡은 뒤에 새 크기에 맞춘다.
+  useEffect(() => {
+    if (!api || refitOn === undefined) return;
+    const timer = setTimeout(() => fitToViewport(api), 150);
+    return () => clearTimeout(timer);
+  }, [api, refitOn]);
 
   return (
     <div className="drawing" style={{ height }}>

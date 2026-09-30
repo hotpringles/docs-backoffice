@@ -1,6 +1,7 @@
 import type { DrawingResult } from "@/lib/docs";
-import { ExcalidrawView } from "./ExcalidrawView";
+import { displayName } from "@/lib/transform/paths";
 import { InlineDrawing } from "./InlineDrawing";
+import { StandaloneDrawing } from "./StandaloneDrawing";
 
 const REASONS: Record<string, string> = {
   "not-found": "그림 파일을 찾지 못했어요",
@@ -34,9 +35,5 @@ export function DrawingBlock({ path, result, sourceUrl, inline = false }: Props)
   }
   // 문서 글 사이의 그림은 잠가 두고(스크롤 통과), 단독 화면의 그림은 처음부터 조작할 수 있다.
   if (inline) return <InlineDrawing scene={result.scene} path={path} />;
-  return (
-    <figure className="drawing-figure">
-      <ExcalidrawView scene={result.scene} height="80vh" />
-    </figure>
-  );
+  return <StandaloneDrawing scene={result.scene} title={displayName(path)} />;
 }
