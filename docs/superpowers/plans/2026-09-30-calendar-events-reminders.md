@@ -1849,8 +1849,10 @@ describe("login", () => {
 
   it("문자열이 아니거나 아주 긴 코드도 죽지 않고 틀린 코드로 센다", async () => {
     const handlers = createAuthHandlers(deps());
-    for (const code of [undefined, null, 123, {}, [], "x".repeat(10_000)]) {
-      const response = await handlers.login(loginRequest(code));
+    // 같은 IP로 다섯 번 틀리면 잠기므로, 값마다 다른 IP로 보내서 잠금과 섞이지 않게 한다.
+    const codes: unknown[] = [undefined, null, 123, {}, [], "x".repeat(10_000)];
+    for (const [index, code] of codes.entries()) {
+      const response = await handlers.login(loginRequest(code, `10.0.0.${index}`));
       expect(response.status, JSON.stringify(code)?.slice(0, 20)).toBe(401);
     }
   });
