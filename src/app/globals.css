@@ -965,7 +965,7 @@ body:has(.cal-page) {
  * 좁은 화면(태블릿·폰)에서는 나란히 둘 자리가 없어서 목차가 본문 위에 놓인다.
  */
 .page.doc-page {
-  max-width: 84rem;
+  max-width: 88rem;
 }
 
 .doc-layout {
@@ -1024,6 +1024,16 @@ body:has(.cal-page) {
   .doc-aside .toc li {
     padding-top: 0.15rem;
     padding-bottom: 0.15rem;
+  }
+}
+
+/*
+ * 화면이 충분히 넓으면 본문을 정중앙보다 살짝(약 40px) 오른쪽에 둔다. 왼쪽의 목차와 본문 사이가 넉넉해 보이고,
+ * 본문 시선이 목차에서 멀어지지 않는다. 왼쪽에 여백(padding)을 더하면 본문이 그 절반만큼 오른쪽으로 간다.
+ */
+@media (min-width: 1280px) {
+  .doc-layout {
+    padding-left: 5rem;
   }
 }
 
