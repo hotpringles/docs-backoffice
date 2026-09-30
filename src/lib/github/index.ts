@@ -1,8 +1,10 @@
 import "server-only";
 import { loadConfig } from "@/lib/config";
+import { loadAuthorOrNull } from "./author";
 import {
   createGitHubClient,
   withStaleFallback,
+  type FileCreator,
   type GitHubClient,
   type LatestCommit,
   type Loaded,
@@ -30,6 +32,14 @@ export const getTree: () => Promise<Loaded<TreeEntry[]>> = withStaleFallback(() 
 
 export function getBlobText(sha: string): Promise<string> {
   return getGitHubClient().getBlobText(sha);
+}
+
+/** 작성자 조회를 이만큼(밀리초) 넘게 기다리지 않는다. 라벨은 부가 정보라서 문서 보기를 늦추면 안 된다. */
+const AUTHOR_TIMEOUT_MS = 2000;
+
+/** 문서를 처음 올린 사람. 조회가 실패하거나 늦으면 null이다(그러면 라벨을 그냥 생략한다). */
+export function getDocAuthorOrNull(path: string): Promise<FileCreator | null> {
+  return loadAuthorOrNull(() => getGitHubClient().getFileCreator(path), AUTHOR_TIMEOUT_MS);
 }
 
 /** 최신 커밋 정보. 화면의 부가 정보라서 실패해도 문서 보기를 막지 않는다. */

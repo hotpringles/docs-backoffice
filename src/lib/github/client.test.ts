@@ -79,6 +79,55 @@ describe("getLatestCommit", () => {
   });
 });
 
+describe("getFileCreator", () => {
+  const commit = (name: string, login: string | null) => ({ commit: { author: { name } }, author: login ? { login } : null });
+  type Call = [string, RequestInit & { next?: unknown }];
+
+  it("그 파일의 커밋 기록에서 가장 오래된 커밋의 작성자를 돌려준다(목록은 최신 순이라 마지막 것)", async () => {
+    const fetchImpl = vi.fn(async () => respond([commit("나중에 고친 사람", "editor"), commit("유재환", "letsgojh")]));
+    const creator = await clientWith(fetchImpl as unknown as typeof fetch).getFileCreator("ai/docs/2026-09-09-capture.md");
+
+    expect(creator).toEqual({ login: "letsgojh", name: "유재환" });
+    const [url, init] = fetchImpl.mock.calls[0] as unknown as Call;
+    expect(url).toBe("https://api.github.com/repos/org/repo/commits?sha=develop&path=ai%2Fdocs%2F2026-09-09-capture.md&per_page=100");
+    // 처음 올린 사람은 바뀌지 않으니 하루 동안 캐시한다(push webhook의 트리 무효화에는 묶지 않는다).
+    expect(init.next).toEqual({ revalidate: 86400, tags: ["authors"] });
+  });
+
+  it("한글·공백이 든 경로도 주소에 안전하게 넣는다", async () => {
+    const fetchImpl = vi.fn(async () => respond([commit("a", "a")]));
+    await clientWith(fetchImpl as unknown as typeof fetch).getFileCreator("frontend/docs/한글 문서.md");
+    expect((fetchImpl.mock.calls[0] as unknown as Call)[0]).toContain("path=frontend%2Fdocs%2F%ED%95%9C%EA%B8%80%20%EB%AC%B8%EC%84%9C.md");
+  });
+
+  it("기록이 100개를 넘어 여러 쪽이면 마지막 쪽을 따로 받아서 거기서 가장 오래된 것을 고른다", async () => {
+    const next = '<https://api.github.com/repositories/1/commits?page=2>; rel="next", <https://api.github.com/repositories/1/commits?page=3>; rel="last"';
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(respond([commit("최신", "new")], { headers: { link: next } }))
+      .mockResolvedValueOnce(respond([commit("중간", "mid"), commit("처음 올린 사람", "first")]));
+    const creator = await clientWith(fetchImpl as unknown as typeof fetch).getFileCreator("a.md");
+
+    expect(creator).toEqual({ login: "first", name: "처음 올린 사람" });
+    expect((fetchImpl.mock.calls[1] as unknown as Call)[0]).toMatch(/&page=3$/);
+  });
+
+  it("기록이 하나도 없으면 null이다", async () => {
+    const fetchImpl = vi.fn(async () => respond([]));
+    expect(await clientWith(fetchImpl as unknown as typeof fetch).getFileCreator("nope.md")).toBeNull();
+  });
+
+  it("GitHub 계정이 지워진 작성자는 계정 이름 없이 커밋에 적힌 이름만 돌려준다", async () => {
+    const fetchImpl = vi.fn(async () => respond([commit("탈퇴한 사람", null)]));
+    expect(await clientWith(fetchImpl as unknown as typeof fetch).getFileCreator("a.md")).toEqual({ login: null, name: "탈퇴한 사람" });
+  });
+
+  it("호출 한도를 넘으면 RateLimitError를 그대로 던진다", async () => {
+    const fetchImpl = vi.fn(async () => respond({}, { status: 403, headers: { "x-ratelimit-remaining": "0" } }));
+    await expect(clientWith(fetchImpl as unknown as typeof fetch).getFileCreator("a.md")).rejects.toBeInstanceOf(RateLimitError);
+  });
+});
+
 describe("오류 처리", () => {
   it("남은 호출이 0인 403은 RateLimitError이고 초기화 시각을 담는다", async () => {
     const fetchImpl = vi.fn(async () =>

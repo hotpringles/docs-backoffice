@@ -942,6 +942,22 @@ body:has(.cal-page) {
   margin-left: 0.5rem;
 }
 
+/* 문서를 처음 올린 사람 라벨(문서 페이지 위쪽). 날짜·태그 줄의 맨 앞에 붙는다. */
+.author-label {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0.05rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-soft);
+  color: var(--fg);
+  font-size: 0.85rem;
+}
+
+.author-role {
+  color: var(--muted);
+}
+
 .banner {
   padding: 0.6rem 0.9rem;
   border-radius: 6px;

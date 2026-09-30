@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AuthorLabel } from "@/components/AuthorLabel";
 import { DrawingBlock } from "@/components/DrawingBlock";
 import { MarkdownView } from "@/components/MarkdownView";
 import { StaleBanner } from "@/components/StaleBanner";
@@ -8,6 +9,7 @@ import { Toc } from "@/components/Toc";
 import { loadConfig } from "@/lib/config";
 import { loadDocPage } from "@/lib/docs";
 import { areaOfPath, docAreas } from "@/lib/github/areas";
+import { getDocAuthorOrNull } from "@/lib/github";
 import { pathFromSegments } from "@/lib/github/tree";
 import { blobUrl } from "@/lib/transform/repo-urls";
 
@@ -34,6 +36,8 @@ export default async function DocPage({ params }: Props) {
   const areas = docAreas(config.docsPaths);
   const area = areas.length >= 2 ? areaOfPath(areas, page.path) : undefined;
   const listHref = area ? `/?area=${area.key}` : "/";
+  // 문서를 처음 올린 사람. 트리에 실제로 있는 문서일 때만(위에서 확인함) GitHub에 묻고, 못 받으면 라벨만 뺀다.
+  const author = await getDocAuthorOrNull(page.path);
 
   if (page.kind === "drawing") {
     return (
@@ -42,6 +46,11 @@ export default async function DocPage({ params }: Props) {
           <Link href={listHref}>← 문서 목록</Link>
         </p>
         <h1>{page.title}</h1>
+        {author && (
+          <p className="meta">
+            <AuthorLabel author={author} />
+          </p>
+        )}
         {page.stale && <StaleBanner />}
         <DrawingBlock path={page.path} result={page.result} sourceUrl={page.sourceUrl} />
         <p className="meta">
@@ -71,8 +80,9 @@ export default async function DocPage({ params }: Props) {
             <Link href={listHref}>← 문서 목록</Link>
           </p>
           {!doc.hasH1 && <h1>{page.title}</h1>}
-          {(doc.frontmatter.date || doc.frontmatter.tags.length > 0) && (
+          {(author || doc.frontmatter.date || doc.frontmatter.tags.length > 0) && (
             <p className="meta">
+              {author && <AuthorLabel author={author} />}
               {doc.frontmatter.date && <time dateTime={doc.frontmatter.date}>{doc.frontmatter.date}</time>}
               {doc.frontmatter.tags.map((tag) => (
                 <span key={tag} className="tag">
