@@ -34,6 +34,16 @@ function blankToNull(value: unknown): string | null | undefined {
 
 const isRemindOption = (value: unknown): value is number => (REMIND_OPTIONS as readonly unknown[]).includes(value);
 
+/**
+ * 알림 시점 목록. 값이 없으면 기본(당일, 1일 전), 허용되지 않은 값이 하나라도 있으면 null.
+ * 중복을 없애고 오름차순으로 정렬한다. 일정과 모임 확정이 함께 쓴다.
+ */
+export function parseRemindOffsets(value: unknown): number[] | null {
+  if (value === undefined) return [...DEFAULT_REMIND_OFFSETS];
+  if (!Array.isArray(value) || !value.every(isRemindOption)) return null;
+  return [...new Set(value)].sort((a, b) => a - b);
+}
+
 /** 사용자가 보낸 일정 내용을 검사하고 다듬는다. 틀린 필드는 한꺼번에 알려준다. */
 export function validateEventInput(raw: unknown, people: Person[]): ValidationResult {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
@@ -94,15 +104,9 @@ export function validateEventInput(raw: unknown, people: Person[]): ValidationRe
     }
   }
 
-  let remindOffsets: number[] = [...DEFAULT_REMIND_OFFSETS];
-  if (body.remindOffsets !== undefined) {
-    const list = body.remindOffsets;
-    if (!Array.isArray(list) || !list.every(isRemindOption)) {
-      errors.remindOffsets = "알림 시점은 당일, 1일 전, 3일 전 중에서 골라 주세요.";
-    } else {
-      remindOffsets = [...new Set(list)].sort((a, b) => a - b);
-    }
-  }
+  const parsedOffsets = parseRemindOffsets(body.remindOffsets);
+  if (parsedOffsets === null) errors.remindOffsets = "알림 시점은 당일, 1일 전, 3일 전 중에서 골라 주세요.";
+  const remindOffsets = parsedOffsets ?? [...DEFAULT_REMIND_OFFSETS];
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
   return { ok: true, value: { title, date, startTime, endTime, memo, attendeeIds, remindOffsets } };
