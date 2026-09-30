@@ -504,10 +504,16 @@ body:has(.cal-page) {
   white-space: pre-wrap;
 }
 
+/*
+ * 저장·확인·만들기 같은 동작 버튼 줄은 오른쪽 끝에 두고, 주된 버튼(코드에서 맨 앞)이 가장 오른쪽에 온다.
+ * row-reverse라서 화면에서만 뒤집히고 Tab 순서는 그대로 주된 버튼이 먼저다.
+ */
 .event-buttons,
 .editor-actions,
 .form-actions {
   display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
   gap: 0.5rem;
   margin-top: 0.4rem;
 }
@@ -747,7 +753,16 @@ body:has(.cal-page) {
 }
 
 .slot-grid td {
-  padding: 2px;
+  padding: 3px 2px;
+}
+
+/* 날짜 머리글과 첫 줄 사이, 마지막 줄과 표 아래 테두리 사이에 위아래 여백을 준다. */
+.slot-grid tbody tr:first-child > * {
+  padding-top: 0.7rem;
+}
+
+.slot-grid tbody tr:last-child > * {
+  padding-bottom: 0.6rem;
 }
 
 .slot-time {
@@ -770,10 +785,11 @@ body:has(.cal-page) {
   border-color: var(--border-strong);
 }
 
+/* 내가 가능하다고 표시한 칸(active)은 강조색(파랑)이다. 초록은 전체 결과의 히트맵에만 쓴다. */
 .slot.on,
 .slot.on:hover:not(:disabled) {
-  border-color: var(--ok);
-  background: var(--ok);
+  border-color: var(--accent);
+  background: var(--accent);
 }
 
 .slot:disabled {
@@ -1111,9 +1127,9 @@ button:disabled {
   opacity: 0.5;
 }
 
-/* 수정 폼 안의 삭제 버튼: 오른쪽 끝에, 지우는 동작이라는 걸 색으로 알린다. */
+/* 수정 폼 안의 삭제 버튼: 저장·취소와 떨어진 왼쪽 끝에 두고(줄이 row-reverse라서 margin-right로 민다), 지우는 동작이라는 걸 색으로 알린다. */
 button.danger {
-  margin-left: auto;
+  margin-right: auto;
   border-color: color-mix(in srgb, var(--danger) 45%, var(--border-strong));
   color: var(--danger);
 }
@@ -1131,6 +1147,7 @@ button[type="submit"]:hover:not(:disabled) {
 
 /* 내 시간 화면의 저장 줄: 표가 길어도 저장 버튼이 화면 아래에 늘 보이게 붙인다. */
 .availability .editor-actions {
+  justify-content: space-between; /* 저장 버튼은 오른쪽, "저장하지 않은 변경" 안내는 왼쪽 */
   position: sticky;
   bottom: 0;
   z-index: 3;
