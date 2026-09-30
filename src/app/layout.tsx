@@ -25,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav aria-label="주요 메뉴" className="site-links">
               <Link href="/">문서</Link>
               <Link href="/calendar">달력</Link>
+              <Link href="/meetups">모임</Link>
             </nav>
           </div>
           <NotificationBell />

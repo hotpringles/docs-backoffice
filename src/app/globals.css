@@ -321,6 +321,17 @@ a {
   gap: 0.5rem;
 }
 
+.meetup-list {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.meetup-list li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
 .field-error,
 .form-error {
   margin: 0;

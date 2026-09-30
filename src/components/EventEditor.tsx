@@ -8,6 +8,7 @@ import { emptyForm, formFromEvent, formToPayload, toggleValue, type EventFormSta
 import type { EventRecord } from "@/lib/events/store";
 import { MAX_MEMO_LENGTH, MAX_TITLE_LENGTH, REMIND_OPTIONS, type FieldErrors } from "@/lib/events/validate";
 import { nameOf, type Person } from "@/lib/people";
+import { CodeForm } from "./CodeForm";
 
 type Props = {
   /** 선택한 날짜(YYYY-MM-DD). 날짜가 바뀌면 부모가 key를 바꿔서 이 컴포넌트를 새로 시작한다. */
@@ -131,21 +132,14 @@ export function EventEditor({ date, events, people, canEdit }: Props) {
   return (
     <div className="editor">
       {prompt ? (
-        <form className="code-form" onSubmit={submitCode}>
-          <p className="meta">{prompt.message ?? "일정을 바꾸려면 팀 편집 코드가 필요해요."}</p>
-          <label>
-            편집 코드
-            <input type="password" value={code} onChange={(e) => setCode(e.target.value)} autoComplete="off" required />
-          </label>
-          <div className="form-actions">
-            <button type="submit" disabled={busy}>
-              {busy ? "확인 중…" : "확인"}
-            </button>
-            <button type="button" onClick={cancel} disabled={busy}>
-              취소
-            </button>
-          </div>
-        </form>
+        <CodeForm
+          message={prompt.message ?? "일정을 바꾸려면 팀 편집 코드가 필요해요."}
+          code={code}
+          busy={busy}
+          onCodeChange={setCode}
+          onSubmit={submitCode}
+          onCancel={cancel}
+        />
       ) : draft ? (
         <form className="event-form" onSubmit={submitForm}>
           <label>
