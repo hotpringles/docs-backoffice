@@ -37,6 +37,40 @@
 
 * {
   box-sizing: border-box;
+  /* Firefox: 페이지, 목차, 코드 블록, 표 등 모든 스크롤바를 얇고 조용하게. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--fg) 30%, transparent) transparent;
+}
+
+/*
+ * Chrome·Edge·Safari: `scrollbar-width: thin`은 굵기가 정해져 있어(윈도우 Chrome 약 10px) 아직 두껍다. 이 브라우저들은
+ * ::-webkit-scrollbar로 6px를 직접 지정한다. 위의 표준 속성이 하나라도 켜져 있으면 이 지정이 무시되므로 auto로 되돌린다.
+ * (모든 페이지가 같은 굵기를 써서 스크롤바 자리가 페이지마다 달라 내용이 옆으로 밀리는 일이 없다.)
+ */
+@supports selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--fg) 28%, transparent);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--fg) 45%, transparent);
+  }
 }
 
 html {
