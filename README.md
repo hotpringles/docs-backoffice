@@ -58,7 +58,7 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 
 ## 푸시 알림 설정
 
-`develop`에서 표시 대상 문서가 바뀌면 구독한 기기에 알림을 보냅니다. 로그인이 없어서 누구나 종 아이콘으로 구독할 수 있습니다(구독은 최대 100대).
+구독한 기기에 알림을 보낼 수 있는 기반입니다. 알림은 **일정(전날·당일)과 모임(열림·확정) 소식용**이고, 그 알림을 보내는 기능은 이후 계획에서 추가됩니다. **문서가 바뀌었다는 알림은 보내지 않습니다.** 지금은 `npm run push:test`로 보내는 시험 알림만 갑니다. 로그인이 없어서 누구나 종 아이콘으로 구독할 수 있습니다(구독은 최대 100대).
 
 1. Neon Postgres를 만들고 연결 문자열을 `DATABASE_URL`에 넣습니다. (Vercel에서는 Marketplace의 Neon을 프로젝트에 연결하면 환경변수가 자동으로 들어갑니다.)
 2. `npm run vapid`로 키 한 쌍을 만들어 `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`에 넣고, `VAPID_SUBJECT`(예: `mailto:me@example.com`)도 채웁니다.
@@ -67,9 +67,7 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 
 - **iPhone·iPad**는 Safari의 공유 버튼 → **홈 화면에 추가**로 설치한 앱에서만 알림을 받을 수 있습니다(iOS 16.4 이상).
 - **개발 중에는** 서비스 워커와 푸시가 `http://localhost`에서도 동작합니다. 폰에서 확인하려면 HTTPS 주소(배포)가 필요합니다.
-- 알림에 필요한 환경변수가 하나라도 없으면 알림만 건너뛰고, 문서 화면과 webhook 처리는 그대로 동작합니다(서버 로그에 무엇이 빠졌는지 남습니다).
-- 문서가 바뀐 push는 GitHub이 같은 이벤트를 다시 보내도(수동 재전송) 알림이 한 번만 갑니다. 다만 **아무에게도 보내지 못한 경우**(구독 목록을 못 읽었거나, 구독자가 있는데 전부 실패)에는 기록을 풀어 두므로, 원인(예: VAPID 키 오타)을 고친 뒤 GitHub webhook의 **Redeliver**로 다시 보낼 수 있습니다. 서버가 발송 도중에 멈춘 경우처럼 기록만 남고 알림이 가지 않은 드문 경우에는 다시 보내기가 막히니, 필요하면 `delete from notified_commits where sha = '<커밋 SHA>'`로 기록을 지우세요.
-- 알림 문구는 문서 제목 대신 **파일 이름**을 씁니다(제목을 얻으려면 GitHub 호출이 더 필요해서 webhook 처리가 느려집니다).
+- 알림 환경변수(`DATABASE_URL`, VAPID 키)가 없어도 문서 화면과 webhook은 그대로 동작합니다. 종 아이콘으로 구독하려 하면 "준비되지 않았어요" 같은 안내가 나올 뿐입니다.
 
 ## 구조
 

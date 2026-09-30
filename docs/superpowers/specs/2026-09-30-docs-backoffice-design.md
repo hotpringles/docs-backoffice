@@ -9,7 +9,7 @@
 ## 1. 목적과 성공 기준
 
 **목적.**
-1. 공개 GitHub 저장소의 `develop` 브랜치에 있는 Markdown 문서(Obsidian 문법과 Excalidraw 플러그인 그림 포함)를 push 직후 웹에서 읽기 전용으로 보여주고, 문서가 갱신되면 휴대폰으로 알림을 보낸다.
+1. 공개 GitHub 저장소의 `develop` 브랜치에 있는 Markdown 문서(Obsidian 문법과 Excalidraw 플러그인 그림 포함)를 push 직후 웹에서 읽기 전용으로 보여주고.
 2. 팀이 웹에서 일정(날짜)을 등록하면, 지정한 날에 휴대폰으로 알림을 보낸다.
 
 **사용자와 조건.**
@@ -22,7 +22,7 @@
 1. `develop`에 push하면 별도 조작 없이 화면에 최신 문서가 반영된다. (반영 시간은 구현 후 실측해서 기록)
 2. `.excalidraw.md` 그림이 문서 안과 단독 화면에서 읽기 전용으로 표시된다.
 3. Obsidian 위키링크(`[[ ]]`, `![[ ]]`)가 동작한다.
-4. Android와 iPhone(홈 화면에 추가한 PWA)에서 문서 갱신 알림을 받는다.
+4. Android와 iPhone(홈 화면에 추가한 PWA)에서 알림을 구독하고 받을 수 있다.
 5. 등록한 일정이 지정한 날 한국시간 오전 9시~10시경에 알림으로 오고, 같은 알림이 중복되지 않는다.
 6. 편집 코드 없이는 일정을 만들거나 바꾸거나 지울 수 없다.
 7. Vercel Hobby, Neon Free, GitHub API 한도 안에서 동작한다.
@@ -56,7 +56,6 @@
   → GitHub webhook → POST /api/github-webhook
       → 서명 검증 → develop push인지 확인
       → 트리 캐시 무효화
-      → (문서 변경이 있으면) 응답 후 구독자에게 Web Push 발송
   → 사용자가 접속
       → 트리 조회 (무효화된 경우 GitHub API)
       → 파일 내용은 blob SHA 키 캐시에서 조회, 없으면 GitHub API
@@ -94,21 +93,19 @@ GitHub와 Next.js를 모르는 순수 함수 모음이다. 단독으로 테스�
 ### 5.3 Webhook (`POST /api/github-webhook`)
 1. 원본 본문을 `GITHUB_WEBHOOK_SECRET`으로 HMAC-SHA256 계산해 `X-Hub-Signature-256`과 timing-safe 비교한다. 다르면 401.
 2. `ping`은 200. `develop`이 아닌 push는 무시(202).
-3. `develop` push면 `tree` 캐시를 무효화한다. **무효화가 알림보다 먼저다.** Next.js 16에서 외부 서비스가 부르는 경로는 `revalidateTag('tree', { expire: 0 })`로 즉시 만료시킨다.
-4. push 이벤트의 변경 파일 목록에서 `DOCS_PATHS` 아래의 문서 파일(`.md`)이 바뀐 경우에만 알림을 보낸다. (`develop`에 PR이 머지되면 push 이벤트가 생기므로 PR 조회는 필요 없다.) GitHub은 10초 안에 응답하지 않으면 실패로 기록하므로, `after`(`next/server`, Next.js 15.1부터 정식)로 응답 뒤에 발송한다. Vercel에서는 `waitUntil`로 구현되어 응답이 끝난 뒤에도 함수의 최대 실행 시간까지 작업이 이어진다.
-5. **중복 방지.** push 이벤트의 커밋 SHA를 `notified_commits`에 기록하고, 이미 있으면 알림을 다시 보내지 않는다. GitHub 수동 재전송 시에도 알림이 두 번 가지 않는다.
+3. `develop` push면 `tree` 캐시를 무효화한다. Next.js 16에서 외부 서비스가 부르는 경로는 `revalidateTag('tree', { expire: 0 })`로 즉시 만료시킨다.
+4. 문서가 바뀌었다는 알림은 보내지 않는다(2026-09-30 사용자 결정: 알림은 일정과 모임 소식만 받는다). 그래서 webhook은 캐시 무효화만 하고, 알림 발송이나 중복 방지 기록은 두지 않는다. (`develop`에 PR이 머지되면 push 이벤트가 생기므로 PR 조회는 필요 없다.)
 
 ### 5.4 알림 발송 (`lib/push`)
-webhook(5.3)과 스케줄러(5.7)가 함께 쓰는 공용 모듈이다. 호출하는 쪽이 알림의 제목, 본문, 열 주소(`url`)를 넘긴다.
+스케줄러(5.7)와 모임 알림(달력·모임 스펙)이 함께 쓰는 공용 모듈이다. 호출하는 쪽이 알림의 제목, 본문, 열 주소(`url`)를 넘긴다.
 - **서버가 상시 깨어 있을 필요는 없다.** 알림 배달은 브라우저 벤더가 운영하는 push service가 맡고, 사용자 기기에서는 앱이 닫혀 있어도 service worker가 필요할 때 자동으로 시작되어 알림을 처리한다. (MDN Push API) 우리 서버는 webhook이나 cron이 호출해 발송하는 순간에만 실행되면 되므로, 요청 시에만 실행되는 Vercel 서버리스 함수와 잘 맞는다.
 - VAPID 키로 `web-push`를 사용해 모든 구독자에게 보낸다.
-- 문서 갱신 알림 문구는 "문서가 업데이트됐어요"에 바뀐 문서의 **파일 이름** 세 개까지를 붙이고 나머지는 "외 N건"으로 줄인다(제목을 얻으려면 문서마다 GitHub 호출이 더 필요해서 webhook 처리가 느려진다). 파일 이름은 40자, 주소는 500자로 제한한다. 한 문서만 바뀌었으면 그 문서를, 여러 개면 `/`를 연다.
+- 문서 변경 알림은 없다. 알림 문구는 호출하는 쪽(일정 알림 5.7, 모임 알림)이 만들고, 제목·본문·열 주소의 길이도 호출하는 쪽이 웹 푸시 본문 제한(약 4KB)보다 훨씬 작게 제한한다.
 - 만료된 구독(404/410 응답으로 알려진 경우)은 행을 삭제한다. 동작은 구현 때 실제로 확인한다.
 
 ### 5.5 데이터베이스 (Neon Postgres)
 ```
 push_subscriptions(endpoint PK, p256dh, auth, created_at)
-notified_commits(sha PK, notified_at)
 events(id PK, title, event_date date, memo null, remind_offsets int[], created_at, updated_at)
 sent_reminders(event_id FK on delete cascade, offset_days, sent_on date, PK(event_id, offset_days))
 auth_attempts(ip_hash PK, failed_count, window_start)
@@ -156,7 +153,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 ### 6.3 알림 설정 (헤더의 종 아이콘, 작은 패널)
 - "알림 받기" 버튼으로 권한을 요청하고 구독 정보를 저장한다. 해제도 같은 자리에서 한다.
 - iPhone에서 홈 화면에 추가하지 않은 상태에서는 "공유 → 홈 화면에 추가" 안내를 보여준다. (iOS 16.4 이상, 홈 화면 웹앱에서만 Web Push가 동작하고 권한 요청은 사용자 동작에 대한 응답이어야 한다.)
-- 알림을 누르면 알림에 담긴 주소(문서 알림은 `/`, 일정 알림은 `/events`)가 열린다.
+- 알림을 누르면 알림에 담긴 주소(일정 알림은 `/events`)가 열린다.
 
 ### 6.4 일정 (`/events`, 헤더에 "일정" 링크)
 > 이 화면은 `2026-09-30-calendar-and-meetups-design.md`의 월 달력(`/calendar`)으로 대체된다.
@@ -193,7 +190,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 
 ## 8. 테스트 (TDD, 순수 함수부터)
 - **변환 모듈:** frontmatter 유무, 위키링크 변형(별칭, 제목 지정, 임베드, 없는 대상, 동명이인), Excalidraw(압축, 평문, 손상 데이터, 여러 줄로 나뉜 압축 문자열, CRLF), 공백·작은따옴표·한글이 든 파일 경로의 URL 처리.
-- **Webhook:** 올바른/틀린 서명, 브랜치 필터, `ping`, 같은 SHA 재전송 시 알림 중복 없음.
+- **Webhook:** 올바른/틀린 서명, 브랜치 필터, `ping`.
 - **GitHub 클라이언트:** 같은 SHA는 캐시 재사용, 한도 초과 시 캐시 폴백.
 - **알림:** `web-push` 모킹, 410 응답 시 구독 행 삭제.
 - **일정 검증:** 제목 길이, 날짜 형식, 알림 시점 허용값.
@@ -214,7 +211,7 @@ auth_attempts(ip_hash PK, failed_count, window_start)
 2. (확인 완료) 실제 `.excalidraw.md` 샘플로 형식을 검증했다. `compressed-json`(LZ-String base64)이 여러 줄로 나뉘어 있고 풀면 장면 JSON이 나온다. 해당 샘플은 플러그인 2.27.3, 요소 597개(글자 354, 사각형 136, 화살표 101, 마름모 5, 선 1), 삽입 이미지 0개다. 다만 이 샘플은 사용자의 로컬 Obsidian 볼트에 있고 문서 저장소 `develop`에는 아직 `.excalidraw.md`가 없다. 그림도 같은 `frontend/docs/plan` 폴더에 둔다(확정). 저장소에 그림을 올리는 일은 사용자가 직접 한다. 샘플 파일명 `Manager's Manager 프론트엔드 흐름.excalidraw.md`에는 공백, 작은따옴표, 한글이 들어 있어 경로 처리 테스트에 쓴다.
 3. 캐시 만료 시간 10분이 적절한지.
 4. Neon 깨어남 지연이 webhook 10초 안에서 문제가 되는지, 일정 화면과 cron 응답에 영향이 없는지 실측.
-5. (확인 완료) Vercel에서 응답 후 알림을 발송하는 방식은 `after`(Next.js 15.1부터 정식)를 쓴다. Vercel에서는 `waitUntil`로 구현되어 응답 뒤에도 최대 실행 시간까지 이어진다.
+5. (해당 없음) 문서 변경 알림을 뺐으므로 webhook 뒤 발송(`after`)은 쓰지 않는다. 일정·모임 알림의 발송 방식은 계획 3·4에서 정한다.
 6. push 페이로드의 커밋 목록이 큰 push에서 잘리는 경우의 동작.
 7. Vercel Cron의 시간대(UTC 가정)와 `CRON_SECRET` 검증 방식(요청 헤더 형식)을 공식 문서로 확인.
 8. 편집 코드 잠금 기준(10분에 5회 실패)과 쿠키 유효 기간(7일)이 적절한지.

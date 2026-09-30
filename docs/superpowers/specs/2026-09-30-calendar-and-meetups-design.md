@@ -40,7 +40,7 @@
 
 ## 4. 구현 순서와 의존
 
-1. **계획 2:** PWA와 푸시 알림(Neon 연결, 구독 저장, Web Push, 문서 갱신 알림). 이 문서의 알림 기능이 모두 이것 위에 올라간다.
+1. **계획 2:** PWA와 푸시 알림(Neon 연결, 구독 저장, Web Push. 문서 갱신 알림은 사용자 결정으로 뺐다). 이 문서의 알림 기능이 모두 이것 위에 올라간다.
 2. **계획 3(확장):** 달력과 일정. 월 달력, 일정 CRUD, 편집 코드, 하루 단위 cron 알림, 5명 명단.
 3. **계획 4(신규):** 모두의 시간. 모임, 가능 시간, 겹침 계산, 확정 → 일정, 모임 알림.
 
@@ -62,7 +62,7 @@ availability(
   meetup_id → meetups(id) on delete cascade, person_id text, day date, slot smallint,
   PK (meetup_id, person_id, day, slot))            -- "가능"한 칸만 저장
 sent_notices(kind text, ref_id, sent_at, PK (kind, ref_id))   -- 'meetup-opened' | 'meetup-confirmed'
-+ 계획 2와 기존 스펙의 push_subscriptions, notified_commits, sent_reminders, auth_attempts
++ 계획 2와 기존 스펙의 push_subscriptions, sent_reminders, auth_attempts
 ```
 
 - **칸 번호:** `slot 0`이 `day_start`이고 `slot_minutes`씩 커진다. 하루 09:00~22:00, 30분 단위면 칸이 26개다.

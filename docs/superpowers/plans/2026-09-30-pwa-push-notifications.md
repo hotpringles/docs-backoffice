@@ -1,5 +1,10 @@
 # PWA와 푸시 알림 구현 계획 (계획 2/4)
 
+> **범위 변경 (2026-09-30, 구현 후):** 사용자가 **문서 변경 알림은 필요 없다**고 정했다(일정 전날·당일 알림과 모임 열림·확정 알림은 그대로 필요하다). 그래서 구현이 끝난 뒤 브랜치에서 아래를 **뺐다**. 이 문서의 해당 코드 블록과 단계는 기록으로 남겨 두었지만 더 이상 따르지 않는다.
+> - Task 5의 `src/lib/push/notify-docs.ts`(중복 방지 포함)와 `docsChangedPayload`(문구 만들기), Task 6 전체(`src/lib/push/service.ts`와 webhook의 `after(...)` 연결), `notified_commits` 테이블(`db/migrations/0001_push.sql`), Task 10의 `simulate-webhook.sh` SHA 인자와 README의 문서 알림 안내, Task 11의 webhook 시뮬레이션·중복 방지 확인 단계.
+> - 남은 것: DB 계층, 구독 저장·API, 발송 엔진(`sendToAll`, `createWebPushSender`), 서비스 워커, PWA(manifest·아이콘), 종 아이콘. 계획 3(일정 알림)과 계획 4(모임 알림)가 이 위에 올라간다.
+> - 원래 구현은 git 기록에 있다(`f288d0a` 등). 재사용하려면 그 커밋을 참고한다.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 문서 뷰어(계획 1)에 Neon 연결과 PWA, 웹 푸시를 더해서, `develop`에서 표시 대상 문서가 바뀌면 알림을 켠 기기(폰 포함)로 알림을 보낸다. 누구나 헤더의 종 아이콘으로 알림을 켜고 끌 수 있다.

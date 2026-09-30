@@ -80,14 +80,12 @@ describe("실제 마이그레이션 파일", () => {
     await close();
   });
 
-  it("푸시 구독과 알림 기록 테이블이 만들어진다", async () => {
+  it("푸시 구독 테이블이 만들어진다", async () => {
     const { db, close } = await createTestDb();
     const tables = await db.query<{ table_name: string }>(
       "select table_name from information_schema.tables where table_schema = 'public' order by table_name",
     );
-    expect(tables.map((t) => t.table_name)).toEqual(
-      expect.arrayContaining(["push_subscriptions", "notified_commits", "schema_migrations"]),
-    );
+    expect(tables.map((t) => t.table_name)).toEqual(expect.arrayContaining(["push_subscriptions", "schema_migrations"]));
     await close();
   });
 });
