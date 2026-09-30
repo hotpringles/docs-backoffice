@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { deleteEvent, login, logout, saveEvent, type ApiError } from "@/lib/events/client";
+import { deleteEvent, login, saveEvent, type ApiError } from "@/lib/events/client";
 import { emptyForm, formFromEvent, formToPayload, type EventFormState } from "@/lib/events/form";
 import type { EventRecord } from "@/lib/events/store";
 import type { FieldErrors } from "@/lib/events/validate";
@@ -115,12 +115,6 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
     if (draft?.source) begin({ kind: "delete", event: draft.source });
   }
 
-  async function endEditing() {
-    await logout(browserFetch);
-    setAuthed(false);
-    router.refresh();
-  }
-
   function patch(update: Partial<EventFormState>) {
     setDraft((current) => (current ? { ...current, form: { ...current.form, ...update } } : current));
   }
@@ -134,7 +128,6 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
   }
 
   return {
-    authed,
     draft,
     prompt,
     code,
@@ -148,7 +141,6 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
     removeDraft,
     submitCode,
     submitForm,
-    endEditing,
     patch,
     cancel,
   };

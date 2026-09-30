@@ -148,7 +148,6 @@ export function CalendarView({ title, prevHref, nextHref, weeks, eventsByDate, t
           date={openDate}
           events={openEvents}
           people={people}
-          authed={editing.authed}
           busy={editing.busy}
           error={editing.dialogOpen ? null : editing.error}
           onClose={() => {
@@ -159,7 +158,6 @@ export function CalendarView({ title, prevHref, nextHref, weeks, eventsByDate, t
             setOpenDate(null);
             editing.begin({ kind: "edit", event });
           }}
-          onEndEditing={editing.endEditing}
         />
       )}
 
