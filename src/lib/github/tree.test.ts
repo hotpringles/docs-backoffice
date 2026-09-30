@@ -6,6 +6,7 @@ import {
   findDocEntry,
   isDrawingPath,
   isUnderPaths,
+  pathCandidatesFromSegments,
   pathFromSegments,
   type TreeEntry,
 } from "./tree";
@@ -144,5 +145,47 @@ describe("buildTreeGroups", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].label).toBe("/");
     expect(groups[0].nodes.map((n) => n.name)).toEqual(["docs", "README.md"]);
+  });
+});
+
+describe("pathCandidatesFromSegments", () => {
+  it("평범한 조각은 후보가 하나다", () => {
+    expect(pathCandidatesFromSegments(["docs", "README.md"])).toEqual(["docs/README.md"]);
+  });
+
+  it("Next.js가 %인코딩을 풀지 않고 넘긴 조각도 풀어 본 경로를 후보로 더한다(공백·한글·작은따옴표가 든 파일 이름)", () => {
+    const encoded = ["docs", "Manager's%20Manager%20%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C%20%ED%9D%90%EB%A6%84.excalidraw.md"];
+    expect(pathCandidatesFromSegments(encoded)).toEqual([
+      "docs/Manager's%20Manager%20%ED%94%84%EB%A1%A0%ED%8A%B8%EC%97%94%EB%93%9C%20%ED%9D%90%EB%A6%84.excalidraw.md",
+      "docs/Manager's Manager 프론트엔드 흐름.excalidraw.md",
+    ]);
+  });
+
+  it("이미 풀려서 온 조각은 후보가 하나다(풀어 볼 것이 없다)", () => {
+    expect(pathCandidatesFromSegments(["docs", "Manager's Manager 프론트엔드 흐름.excalidraw.md"])).toEqual([
+      "docs/Manager's Manager 프론트엔드 흐름.excalidraw.md",
+    ]);
+  });
+
+  it("%가 잘못 쓰인 조각은 풀지 않고 그대로만 후보로 둔다(예외를 던지지 않는다)", () => {
+    expect(pathCandidatesFromSegments(["a", "100%.md"])).toEqual(["a/100%.md"]);
+    expect(pathCandidatesFromSegments(["a", "%E0%A4%A.md"])).toEqual(["a/%E0%A4%A.md"]);
+  });
+
+  it("풀었더니 위험한 경로가 되는 조각(%2F, %2e%2e, %5C, %00)은 풀린 쪽을 후보에서 뺀다", () => {
+    expect(pathCandidatesFromSegments(["a%2Fb.md"])).toEqual(["a%2Fb.md"]);
+    expect(pathCandidatesFromSegments(["a", "%2e%2e", "secret.md"])).toEqual(["a/%2e%2e/secret.md"]);
+    expect(pathCandidatesFromSegments(["a%5Cb.md"])).toEqual(["a%5Cb.md"]);
+    expect(pathCandidatesFromSegments(["a%00b.md"])).toEqual(["a%00b.md"]);
+  });
+
+  it("두 번 인코딩된 조각은 한 번만 풀어서, 풀린 글자가 또 해석되지 않는다", () => {
+    expect(pathCandidatesFromSegments(["a%2520b.md"])).toEqual(["a%2520b.md", "a%20b.md"]);
+  });
+
+  it("조각이 비었거나 위험하면 후보가 없다", () => {
+    expect(pathCandidatesFromSegments([])).toEqual([]);
+    expect(pathCandidatesFromSegments(["a", ".."])).toEqual([]);
+    expect(pathCandidatesFromSegments(["a", ""])).toEqual([]);
   });
 });

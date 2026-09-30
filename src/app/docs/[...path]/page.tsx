@@ -10,15 +10,19 @@ import { loadConfig } from "@/lib/config";
 import { loadDocPage } from "@/lib/docs";
 import { areaOfPath, docAreas } from "@/lib/github/areas";
 import { getDocAuthorOrNull } from "@/lib/github";
-import { pathFromSegments } from "@/lib/github/tree";
+import { pathCandidatesFromSegments } from "@/lib/github/tree";
 import { blobUrl } from "@/lib/transform/repo-urls";
 
 type Props = { params: Promise<{ path: string[] }> };
 
-// Next.js가 params를 이미 디코딩해서 넘겨주므로 다시 디코딩하지 않는다.
+// Next.js는 같은 주소라도 화면(page)에는 %인코딩을 풀지 않은 조각을, 제목(generateMetadata)에는 푼 조각을 넘기기도 한다
+// (공백·한글·작은따옴표가 든 파일 이름). 그대로 합친 경로와 한 번 푼 경로를 차례로 저장소 트리에서 찾아 실제 있는 문서만 연다.
 async function resolve(params: Props["params"]) {
-  const path = pathFromSegments((await params).path);
-  return path ? loadDocPage(path) : null;
+  for (const path of pathCandidatesFromSegments((await params).path)) {
+    const page = await loadDocPage(path);
+    if (page) return page;
+  }
+  return null;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {

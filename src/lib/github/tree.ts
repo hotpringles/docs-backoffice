@@ -88,6 +88,28 @@ export function pathFromSegments(segments: string[]): string | null {
   return segments.join("/");
 }
 
+/**
+ * 주소 조각을 저장소 경로 후보로 바꾼다. 조각을 그대로 합친 경로와, 조각의 %인코딩을 한 번 푼 경로(다르고 안전할 때만) 순서다.
+ * Next.js는 문서 화면에 주소의 %인코딩을 풀지 않은 조각을 넘기기도 한다(공백·한글·작은따옴표가 든 파일 이름, 제목을 계산하는 쪽에는
+ * 풀어서 넘긴다). 그래서 호출하는 쪽이 후보를 차례로 저장소 트리에서 찾아, 실제 있는 경로만 연다.
+ * 풀린 조각도 `pathFromSegments`의 검사를 다시 통과해야 하므로 %2F, %2e%2e, %5C, %00 같은 우회는 후보가 되지 않는다.
+ */
+export function pathCandidatesFromSegments(segments: string[]): string[] {
+  const candidates: string[] = [];
+  const direct = pathFromSegments(segments);
+  if (direct) candidates.push(direct);
+
+  let decoded: string[] | null = null;
+  try {
+    decoded = segments.map((segment) => decodeURIComponent(segment));
+  } catch {
+    // 잘못된 %인코딩(예: "100%")은 풀지 않고 그대로만 후보로 둔다.
+  }
+  const fromDecoded = decoded ? pathFromSegments(decoded) : null;
+  if (fromDecoded && !candidates.includes(fromDecoded)) candidates.push(fromDecoded);
+  return candidates;
+}
+
 type MutableFolder = { folders: Map<string, MutableFolder>; files: TreeEntry[] };
 
 function toNodes(folder: MutableFolder, prefix: string): TreeNode[] {
