@@ -1,7 +1,7 @@
 import type { Db } from "@/lib/db/types";
 import { json, readJsonBody } from "@/lib/http";
 import { MAX_FAILURES, clearFailures, recordAttempt } from "./attempts";
-import { loadAuthConfig } from "./config";
+import { isEditCodeRequired, loadAuthConfig } from "./config";
 import { clientIp, hashIp } from "./ip";
 import { safeEqual } from "./safe-equal";
 import { SESSION_COOKIE, clearSessionCookie, createSessionToken, readCookie, sessionCookie, verifySessionToken } from "./session";
@@ -28,13 +28,15 @@ function locked(minutes: number): Response {
 
 /**
  * 쓰기 요청이 편집 권한(서명 쿠키)을 가졌는지 확인한다.
- * 쿠키가 없거나 틀리면 401, 인증 환경변수가 없으면 503.
+ * 쿠키가 없거나 틀리면 401, 편집 코드는 있는데 나머지 설정(비밀키 등)이 틀렸으면 503.
+ * 편집 코드를 설정하지 않았으면(`EDIT_CODE`가 비어 있으면) 누구나 편집하므로 항상 통과한다.
  */
 export function requireEditSession(
   request: Request,
   env: Env,
   now: Date,
 ): { ok: true } | { ok: false; response: Response } {
+  if (!isEditCodeRequired(env)) return { ok: true };
   const auth = loadAuthConfig(env);
   if (!auth.ok) return { ok: false, response: json({ error: "편집 코드가 설정되지 않았어요." }, 503) };
 
@@ -51,6 +53,8 @@ export function createAuthHandlers(deps: AuthDeps) {
     async login(request: Request): Promise<Response> {
       const parsed = await readJsonBody(request);
       if (!parsed.ok) return parsed.response;
+      // 편집 코드를 설정하지 않았으면 받을 코드가 없다. 쿠키 없이 통과시킨다.
+      if (!isEditCodeRequired(deps.env())) return json({ ok: true });
 
       const auth = loadAuthConfig(deps.env());
       if (!auth.ok) return json({ error: "편집 코드가 설정되지 않았어요." }, 503);

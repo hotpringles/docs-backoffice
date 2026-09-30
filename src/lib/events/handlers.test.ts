@@ -90,8 +90,15 @@ describe("create", () => {
     expect(await all()).toEqual([]);
   });
 
-  it("인증 환경변수가 없으면 503, 명단(PEOPLE) 설정이 틀리면 이유와 함께 503이다", async () => {
-    expect((await createEventHandlers(deps({ env: () => ({ PEOPLE: ENV.PEOPLE }) })).create(post({ title: "a", date: "2026-10-08" }))).status).toBe(503);
+  it("편집 코드를 설정하지 않았으면 쿠키 없이도 일정을 만들 수 있다", async () => {
+    const open = { PEOPLE: ENV.PEOPLE };
+    const response = await createEventHandlers(deps({ env: () => open })).create(post({ title: "누구나", date: "2026-10-08" }, {}));
+    expect(response.status).toBe(201);
+    expect((await all()).map((event) => event.title)).toEqual(["누구나"]);
+  });
+
+  it("편집 코드는 있는데 비밀키가 없으면 503, 명단(PEOPLE) 설정이 틀리면 이유와 함께 503이다", async () => {
+    expect((await createEventHandlers(deps({ env: () => ({ EDIT_CODE: ENV.EDIT_CODE, PEOPLE: ENV.PEOPLE }) })).create(post({ title: "a", date: "2026-10-08" }))).status).toBe(503);
 
     const response = await createEventHandlers(deps({ env: () => ({ ...ENV, PEOPLE: "p1" }) })).create(post({ title: "a", date: "2026-10-08" }));
     expect(response.status).toBe(503);

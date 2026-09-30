@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { loadAuthConfig } from "./config";
+import { isEditCodeRequired, loadAuthConfig } from "./config";
 
 describe("loadAuthConfig", () => {
   it("둘 다 없으면 무엇이 없는지 알려준다", () => {
@@ -18,5 +18,18 @@ describe("loadAuthConfig", () => {
       ok: true,
       config: { editCode: "code-12345678", sessionSecret: "s".repeat(16) },
     });
+  });
+});
+
+describe("isEditCodeRequired", () => {
+  it("EDIT_CODE가 없거나 비어 있으면(공백뿐이어도) 코드를 받지 않는다", () => {
+    for (const env of [{}, { EDIT_CODE: "" }, { EDIT_CODE: "   " }, { SESSION_SECRET: "s".repeat(32) }]) {
+      expect(isEditCodeRequired(env), JSON.stringify(env)).toBe(false);
+    }
+  });
+
+  it("무언가 적혀 있으면 (너무 짧아서 잘못된 값이어도) 코드를 받는 쪽이다. 잘못 적은 값 때문에 문이 열리면 안 된다", () => {
+    expect(isEditCodeRequired({ EDIT_CODE: "correct-horse-battery" })).toBe(true);
+    expect(isEditCodeRequired({ EDIT_CODE: "short" })).toBe(true);
   });
 });

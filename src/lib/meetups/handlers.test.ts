@@ -65,6 +65,15 @@ async function openMeetup(): Promise<number> {
   return createMeetup(db, { title: "스터디 일정", dates: [D1, D2], dayStart: "09:00", dayEnd: "13:00" });
 }
 
+describe("편집 코드를 설정하지 않았을 때", () => {
+  it("쿠키 없이도 모임을 만들 수 있다", async () => {
+    const open = { PEOPLE: ENV.PEOPLE };
+    const response = await createMeetupHandlers(deps({ env: () => open })).create(post(NEW_MEETUP, {}));
+    expect(response.status).toBe(201);
+    expect((await listMeetups(db)).map((meetup) => meetup.title)).toEqual(["스터디 일정"]);
+  });
+});
+
 describe("create", () => {
   it("편집 권한이 있으면 모임을 만들고 201을 주며, 알림은 응답 뒤에 보낸다", async () => {
     const response = await createMeetupHandlers(deps()).create(post(NEW_MEETUP));

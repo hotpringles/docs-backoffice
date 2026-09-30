@@ -142,10 +142,18 @@ describe("login", () => {
     expect((await handlers.login(broken)).status).toBe(400);
   });
 
-  it("편집 코드나 비밀키가 설정되지 않았으면 503이다", async () => {
-    const response = await createAuthHandlers(deps({ env: () => ({}) })).login(loginRequest(CODE));
-    expect(response.status).toBe(503);
-    expect((await response.json()).error).toContain("설정");
+  it("편집 코드는 있는데 비밀키가 없거나, 코드가 너무 짧으면 503이다", async () => {
+    for (const env of [{ EDIT_CODE: CODE }, { EDIT_CODE: "short", SESSION_SECRET: SECRET }]) {
+      const response = await createAuthHandlers(deps({ env: () => env })).login(loginRequest(CODE));
+      expect(response.status, JSON.stringify(env)).toBe(503);
+      expect((await response.json()).error).toContain("설정");
+    }
+  });
+
+  it("편집 코드를 설정하지 않았으면 코드를 받지 않으니, 로그인 요청은 쿠키 없이 그냥 통과한다", async () => {
+    const response = await createAuthHandlers(deps({ env: () => ({}) })).login(loginRequest("아무거나"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("set-cookie")).toBeNull();
   });
 
   it("데이터베이스가 없거나 오류가 나면 503이다", async () => {
@@ -199,9 +207,16 @@ describe("requireEditSession", () => {
     expect(expired.ok).toBe(false);
   });
 
-  it("인증 환경변수가 없으면 503이다", () => {
-    const result = requireEditSession(withCookie(), {}, clock);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.response.status).toBe(503);
+  it("편집 코드는 있는데 비밀키가 없거나 코드가 너무 짧으면 503이다(닫힌 채로 둔다)", () => {
+    for (const env of [{ EDIT_CODE: CODE }, { EDIT_CODE: "short", SESSION_SECRET: SECRET }]) {
+      const result = requireEditSession(withCookie(), env, clock);
+      expect(result.ok, JSON.stringify(env)).toBe(false);
+      if (!result.ok) expect(result.response.status).toBe(503);
+    }
+  });
+
+  it("편집 코드를 설정하지 않았으면 쿠키가 없어도 통과한다(누구나 편집)", () => {
+    expect(requireEditSession(withCookie(), {}, clock)).toEqual({ ok: true });
+    expect(requireEditSession(withCookie(), { EDIT_CODE: "  " }, clock)).toEqual({ ok: true });
   });
 });
