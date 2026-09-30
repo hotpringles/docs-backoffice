@@ -36,6 +36,7 @@ export function Heatmap({ dates, dayStart, slotCount, slotMinutes, cells, total,
                   <DayHead day={day} />
                 </th>
               ))}
+              <th aria-hidden="true" className="slot-pad" />
             </tr>
           </thead>
           <tbody>
@@ -61,6 +62,7 @@ export function Heatmap({ dates, dayStart, slotCount, slotMinutes, cells, total,
                     </td>
                   );
                 })}
+                <td aria-hidden="true" className="slot-pad" />
               </tr>
             ))}
           </tbody>

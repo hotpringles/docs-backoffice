@@ -5,8 +5,8 @@ export const SLOT_MINUTES = 30;
 export const DEFAULT_DAY_START = "09:00";
 export const DEFAULT_DAY_END = "22:00";
 export const MAX_MEETUP_DAYS = 14;
-/** 후보 날짜는 오늘부터 이만큼 뒤까지만 고를 수 있다. */
-export const MAX_AHEAD_DAYS = 7;
+/** 후보 날짜는 오늘을 포함해 이만큼의 날(일주일) 안에서만 고를 수 있다. */
+export const MEETUP_WINDOW_DAYS = 7;
 
 /** "HH:MM"을 자정부터의 분으로. (형식은 호출하는 쪽이 이미 확인했다고 본다.) */
 export function minutesOf(time: string): number {
@@ -51,12 +51,12 @@ export function datesInRange(startDate: string, endDate: string): string[] | nul
   return Array.from({ length }, (_, index) => addDays(startDate, index));
 }
 
-/** 새 모임의 후보 날짜를 고를 수 있는 범위: 오늘부터 7일 뒤까지(양 끝 포함). `today`는 서울 기준 오늘("YYYY-MM-DD")이다. */
+/** 새 모임의 후보 날짜를 고를 수 있는 범위: 오늘을 포함한 일주일(오늘~6일 뒤, 양 끝 포함). `today`는 서울 기준 오늘("YYYY-MM-DD")이다. */
 export function meetupDateWindow(today: string): { min: string; max: string } {
-  return { min: today, max: addDays(today, MAX_AHEAD_DAYS) };
+  return { min: today, max: addDays(today, MEETUP_WINDOW_DAYS - 1) };
 }
 
-/** 새 모임 폼의 처음 후보 날짜: 시작은 오늘, 끝은 고를 수 있는 마지막 날(오늘로부터 일주일 뒤)이다. */
+/** 새 모임 폼의 처음 후보 날짜: 시작은 오늘, 끝은 고를 수 있는 마지막 날(오늘을 포함한 일주일의 끝)이다. */
 export function defaultMeetupDates(today: string): { startDate: string; endDate: string } {
   const { min, max } = meetupDateWindow(today);
   return { startDate: min, endDate: max };

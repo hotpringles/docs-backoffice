@@ -242,6 +242,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
                   </button>
                 </th>
               ))}
+              <th aria-hidden="true" className="slot-pad" />
             </tr>
           </thead>
           <tbody>
@@ -269,6 +270,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
                     </td>
                   );
                 })}
+                <td aria-hidden="true" className="slot-pad" />
               </tr>
             ))}
           </tbody>

@@ -102,7 +102,7 @@ export function MeetupHeaderActions({ meetup, canEdit, today }: Props) {
     if (result.status === 409) router.refresh(); // 그 사이에 확정됐다면 화면을 새로 불러온다.
   }
 
-  // 날짜 선택칸: 오늘~7일 뒤에, 이미 들어 있던 (지난) 날짜까지 넓혀서 그대로 둘 수 있게 한다.
+  // 날짜 선택칸: 오늘을 포함한 일주일에, 이미 들어 있던 (지난) 날짜까지 넓혀서 그대로 둘 수 있게 한다.
   const window7 = meetupDateWindow(today);
   const minDate = meetup.dates[0] < window7.min ? meetup.dates[0] : window7.min;
   const last = meetup.dates[meetup.dates.length - 1];
@@ -152,7 +152,7 @@ export function MeetupHeaderActions({ meetup, canEdit, today }: Props) {
             <h2 className="modal-title">모임 수정</h2>
             <MeetupFields value={form} onChange={patch} minDate={minDate} maxDate={maxDate} fieldErrors={fieldErrors}>
               <p className="meta">
-                후보 날짜는 오늘부터 일주일 뒤({shortDayLabel(window7.max)})까지 새로 더할 수 있고, 시간은 30분 단위예요. 날짜나 하루 끝을 줄이면
+                후보 날짜는 오늘을 포함해 일주일({shortDayLabel(window7.max)})까지 새로 더할 수 있고, 시간은 30분 단위예요. 날짜나 하루 끝을 줄이면
                 그 밖에 이미 표시된 시간은 지워져요.
               </p>
               {startChanged && (

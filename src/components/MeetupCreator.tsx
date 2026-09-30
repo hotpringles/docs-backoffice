@@ -27,7 +27,7 @@ export function MeetupCreator({ canEdit, today }: { canEdit: boolean; today: str
     if (action === "open") setOpen(true);
   });
 
-  // 후보 날짜는 오늘부터 일주일 뒤까지만 고를 수 있다(서버도 같은 범위를 검사한다).
+  // 후보 날짜는 오늘을 포함한 일주일 안에서만 고를 수 있다(서버도 같은 범위를 검사한다).
   const range = meetupDateWindow(today);
 
   function patch(update: Partial<Form>) {
@@ -97,7 +97,7 @@ export function MeetupCreator({ canEdit, today }: { canEdit: boolean; today: str
     <form className="event-form meetup-form" onSubmit={submit}>
       <MeetupFields value={form} onChange={patch} minDate={range.min} maxDate={range.max} fieldErrors={fieldErrors}>
         <p className="meta">
-          후보 날짜는 오늘부터 일주일 뒤({shortDayLabel(range.max)})까지 고를 수 있고, 시간은 30분 단위예요.
+          후보 날짜는 오늘을 포함해 일주일({shortDayLabel(range.max)})까지 고를 수 있고, 시간은 30분 단위예요.
         </p>
       </MeetupFields>
 
