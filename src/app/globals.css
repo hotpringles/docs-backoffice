@@ -41,6 +41,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* 세로 스크롤바가 있는 긴 페이지와 없는 짧은 페이지에서 내용의 가로 위치가 달라지지 않게, 스크롤바 자리를 양쪽에 똑같이 비워 둔다. */
+  scrollbar-gutter: stable both-edges;
 }
 
 body {
