@@ -52,9 +52,14 @@ export default async function DocPage({ params }: Props) {
   return (
     <main className="page doc-page">
       <div className="doc-layout">
-        {/* 넓은 화면에서는 목차가 본문 왼쪽에 붙어(sticky) 스크롤해도 따라온다. 좁은 화면에서는 본문 위에 놓인다. */}
+        {/* 넓은 화면에서는 본문이 화면 정중앙에 오고, 목차와 "GitHub에서 보기"는 왼쪽에 붙어(sticky) 스크롤해도 따라온다. 좁은 화면에서는 본문 위에 놓인다. */}
         <aside className="doc-aside">
           <Toc headings={doc.toc} />
+          <p className="meta doc-source">
+            <a href={page.sourceUrl} target="_blank" rel="noopener noreferrer">
+              GitHub에서 보기
+            </a>
+          </p>
         </aside>
         <div className="doc-main">
           <p className="crumb">
@@ -84,11 +89,6 @@ export default async function DocPage({ params }: Props) {
               sourceUrlFor={(path) => blobUrl(repo, path)}
             />
           </article>
-          <p className="meta footer-meta">
-            <a href={page.sourceUrl} target="_blank" rel="noopener noreferrer">
-              GitHub에서 보기
-            </a>
-          </p>
         </div>
       </div>
     </main>

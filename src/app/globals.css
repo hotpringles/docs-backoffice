@@ -932,7 +932,7 @@ body:has(.cal-page) {
  * 좁은 화면(태블릿·폰)에서는 나란히 둘 자리가 없어서 목차가 본문 위에 놓인다.
  */
 .page.doc-page {
-  max-width: 72rem;
+  max-width: 80rem;
 }
 
 .doc-layout {
@@ -943,15 +943,35 @@ body:has(.cal-page) {
   margin-top: 0;
 }
 
-@media (min-width: 1100px) {
+/* 목차 맨 아래의 "GitHub에서 보기": 목차 글자와 왼쪽 줄을 맞춘다. */
+.doc-source {
+  margin: 1rem 0 0 1rem;
+}
+
+.doc-source a {
+  color: inherit;
+}
+
+/*
+ * 가운데 칸이 본문(700px)이고 양옆 칸은 같은 폭이라서, 본문은 언제나 화면 정중앙에 온다.
+ * 목차는 왼쪽 칸에서 본문 쪽으로 붙는다. 양옆 칸이 목차를 담을 만큼 넓지 않으면(약 1180px 미만) 목차를 본문 위에 둔다.
+ */
+@media (min-width: 1180px) {
   .doc-layout {
     display: grid;
-    grid-template-columns: minmax(0, 15rem) minmax(0, 43.75rem);
-    gap: 3rem;
-    justify-content: center;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 43.75rem) minmax(0, 1fr);
+  }
+
+  .doc-main {
+    grid-column: 2;
   }
 
   .doc-aside {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: end;
+    margin-right: 2.5rem; /* 본문과의 간격 */
+    width: min(15rem, calc(100% - 2.5rem));
     position: sticky;
     top: 1.5rem;
     align-self: start;
