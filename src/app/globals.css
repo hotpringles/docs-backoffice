@@ -344,10 +344,6 @@ body:has(.cal-page) {
   transform: translateX(-50%);
 }
 
-.day-popover.placed {
-  transform: none;
-}
-
 .day-popover:focus {
   outline: none;
 }
@@ -374,8 +370,7 @@ body:has(.cal-page) {
 
 /* 폰처럼 좁은 화면에서는 날짜 옆에 둘 자리가 없어서 화면 아래에서 올라오는 시트로 그린다. */
 @media (max-width: 599px) {
-  .day-popover,
-  .day-popover.placed {
+  .day-popover {
     top: auto !important;
     right: 8px;
     bottom: 8px;
@@ -422,6 +417,37 @@ body:has(.cal-page) {
 .event-item {
   padding: 0.7rem 0;
   border-bottom: 1px solid var(--border);
+}
+
+/* 마지막 일정 아래에는 선을 긋지 않는다(일정 사이에만 선이 있다). */
+.event-item:last-child {
+  padding-bottom: 0.2rem;
+  border-bottom: 0;
+}
+
+/* 일정 제목을 누르면 수정 화면이 열린다. 버튼이지만 글자처럼 보이게 한다. */
+.event-open {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.event-open:hover:not(:disabled) .event-title {
+  color: var(--accent);
+}
+
+.event-edit-icon {
+  color: var(--muted);
+  font-size: 0.8rem;
+  opacity: 0.6;
 }
 
 .event-title {
@@ -944,6 +970,13 @@ button:where(:hover:not(:disabled)) {
 button:disabled {
   cursor: default;
   opacity: 0.5;
+}
+
+/* 수정 폼 안의 삭제 버튼: 오른쪽 끝에, 지우는 동작이라는 걸 색으로 알린다. */
+button.danger {
+  margin-left: auto;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border-strong));
+  color: var(--danger);
 }
 
 /* 폼을 보내는 버튼(만들기, 확인, 저장, 확정)이 이 화면의 주된 동작이다. */

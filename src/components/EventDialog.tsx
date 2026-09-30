@@ -117,6 +117,11 @@ export function EventDialog({ editing, people }: { editing: EventEditing; people
             <button type="button" onClick={editing.cancel} disabled={editing.busy}>
               취소
             </button>
+            {draft.eventId !== null && (
+              <button type="button" className="danger" onClick={editing.removeDraft} disabled={editing.busy}>
+                삭제
+              </button>
+            )}
           </div>
         </form>
       ) : null}

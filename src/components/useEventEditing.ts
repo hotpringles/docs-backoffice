@@ -14,7 +14,8 @@ export type Pending =
   | { kind: "edit"; event: EventRecord }
   | { kind: "delete"; event: EventRecord }
   | { kind: "resume" };
-type Draft = { eventId: number | null; form: EventFormState };
+/** `source`는 수정 중인 원래 일정(추가 중이면 null). 폼 안의 삭제 버튼이 쓴다. */
+type Draft = { eventId: number | null; form: EventFormState; source: EventRecord | null };
 type Prompt = { then: Pending; message: string | null };
 
 const browserFetch: typeof fetch = (input, init) => fetch(input, init);
@@ -34,8 +35,8 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
   function perform(action: Pending) {
-    if (action.kind === "add") setDraft({ eventId: null, form: emptyForm(action.date) });
-    else if (action.kind === "edit") setDraft({ eventId: action.event.id, form: formFromEvent(action.event, people) });
+    if (action.kind === "add") setDraft({ eventId: null, form: emptyForm(action.date), source: null });
+    else if (action.kind === "edit") setDraft({ eventId: action.event.id, form: formFromEvent(action.event, people), source: action.event });
     else if (action.kind === "delete") void remove(action.event);
   }
 
@@ -102,10 +103,16 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
     const result = await deleteEvent(browserFetch, target.id);
     setBusy(false);
     if (result.ok) {
+      setDraft(null); // 수정 폼 안에서 지웠다면 폼도 닫는다.
       router.refresh();
       return;
     }
     fail(result, { kind: "delete", event: target });
+  }
+
+  /** 수정 폼에서 그 일정을 지운다(확인창을 거친다). */
+  function removeDraft() {
+    if (draft?.source) begin({ kind: "delete", event: draft.source });
   }
 
   async function endEditing() {
@@ -138,6 +145,7 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
     /** 코드 입력이나 일정 폼이 떠 있는지(대화 상자를 열어야 하는지) */
     dialogOpen: prompt !== null || draft !== null,
     begin,
+    removeDraft,
     submitCode,
     submitForm,
     endEditing,

@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { DayCell } from "@/lib/calendar/month";
-import { placePopover, type Placement } from "@/lib/calendar/popover";
+import { placePopover } from "@/lib/calendar/popover";
 import type { EventRecord } from "@/lib/events/store";
 import type { Person } from "@/lib/people";
 import { CalendarGrid } from "./CalendarGrid";
@@ -28,28 +28,54 @@ type Props = {
   notices: string[];
 };
 
-type OpenWindow = { date: string; placement: Placement | null };
-
 /**
  * 달력 화면. 화면 높이에 맞춘 월 달력이고, 날짜를 누르면 그 날짜 옆에 작은 창이 떠서 일정을 보여 준다.
  * 일정 추가·수정은 화면 가운데의 대화 상자에서 한다.
  */
 export function CalendarView({ title, prevHref, nextHref, weeks, eventsByDate, today, initialDate, people, canEdit, problem, notices }: Props) {
   const editing = useEventEditing({ people, canEdit });
-  const [open, setOpen] = useState<OpenWindow | null>(initialDate ? { date: initialDate, placement: null } : null);
+  const [openDate, setOpenDate] = useState<string | null>(initialDate);
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
-  const openDate = open?.date ?? null;
+  const openEvents = openDate ? (eventsByDate[openDate] ?? []) : [];
 
   function select(date: string, element: HTMLElement) {
-    if (open?.date === date) {
-      setOpen(null);
+    if (openDate === date) {
+      setOpenDate(null);
       return;
     }
     triggerRef.current = element;
-    const placement = placePopover(element.getBoundingClientRect(), { width: window.innerWidth, height: window.innerHeight });
-    setOpen({ date, placement });
+    setOpenDate(date);
   }
+
+  // 창을 그린 직후(화면에 보이기 전에) 날짜 칸 옆으로 자리를 잡는다. 달력 표 전체의 경계와 창의 실제 크기를 보고 정하므로,
+  // 일정이 늘거나 줄어 창 높이가 바뀔 때마다 다시 잡는다. 화면에 직접 쓰는 값이라 상태는 바꾸지 않는다.
+  useLayoutEffect(() => {
+    const popover = popoverRef.current;
+    if (!popover) return;
+    const cell = openDate ? document.querySelector<HTMLElement>(`[data-date="${openDate}"]`) : null;
+    const grid = document.querySelector<HTMLElement>(".cal");
+    popover.style.removeProperty("max-height"); // 자연스러운 높이를 재려고 이전 제한을 푼다.
+    if (cell && grid) {
+      const size = popover.getBoundingClientRect();
+      const placement = placePopover({
+        anchor: cell.getBoundingClientRect(),
+        bounds: grid.getBoundingClientRect(),
+        viewport: { width: window.innerWidth, height: window.innerHeight },
+        size: { width: size.width, height: size.height },
+      });
+      if (placement) {
+        popover.style.left = `${placement.left}px`;
+        popover.style.top = `${placement.top}px`;
+        popover.style.maxHeight = `${placement.maxHeight}px`;
+        popover.style.transform = "none";
+      } else {
+        // 폰: CSS가 화면 아래 시트로 그린다.
+        for (const property of ["left", "top", "transform"]) popover.style.removeProperty(property);
+      }
+    }
+    popover.style.visibility = "visible";
+  });
 
   // 열려 있는 창은 바깥을 누르거나 Esc를 누르거나 화면 크기가 바뀌면 닫는다(자리가 어긋나기 때문이다).
   useEffect(() => {
@@ -60,14 +86,14 @@ export function CalendarView({ title, prevHref, nextHref, weeks, eventsByDate, t
       if (popoverRef.current?.contains(target)) return;
       if (target.closest(".cal-cell")) return; // 다른 날짜를 누른 것이면 그 칸의 클릭이 창을 옮긴다.
       if (target.closest(".cal-add")) return; // 일정 추가는 열려 있는 날짜를 기본 날짜로 삼으니, 그 버튼이 직접 창을 닫는다.
-      setOpen(null);
+      setOpenDate(null);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setOpen(null);
+      setOpenDate(null);
       triggerRef.current?.focus();
     };
-    const onResize = () => setOpen(null);
+    const onResize = () => setOpenDate(null);
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", onResize);
@@ -80,11 +106,11 @@ export function CalendarView({ title, prevHref, nextHref, weeks, eventsByDate, t
 
   // 창이 열리면 키보드 사용자가 바로 이어서 쓸 수 있게 포커스를 창으로 옮긴다.
   useEffect(() => {
-    if (openDate) popoverRef.current?.focus();
+    if (openDate) popoverRef.current?.focus({ preventScroll: true });
   }, [openDate]);
 
   function addEvent() {
-    setOpen(null);
+    setOpenDate(null);
     editing.begin({ kind: "add", date: openDate ?? today });
   }
 
@@ -116,25 +142,23 @@ export function CalendarView({ title, prevHref, nextHref, weeks, eventsByDate, t
 
       <CalendarGrid label={`${title} 달력`} weeks={weeks} eventsByDate={eventsByDate} today={today} openDate={openDate} onSelect={select} />
 
-      {open && !problem && (
+      {openDate && !problem && (
         <DayPopover
           ref={popoverRef}
-          date={open.date}
-          events={eventsByDate[open.date] ?? []}
+          date={openDate}
+          events={openEvents}
           people={people}
-          placement={open.placement}
           authed={editing.authed}
           busy={editing.busy}
           error={editing.dialogOpen ? null : editing.error}
           onClose={() => {
-            setOpen(null);
+            setOpenDate(null);
             triggerRef.current?.focus();
           }}
-          onEdit={(event) => {
-            setOpen(null);
+          onOpenEvent={(event) => {
+            setOpenDate(null);
             editing.begin({ kind: "edit", event });
           }}
-          onDelete={(event) => editing.begin({ kind: "delete", event })}
           onEndEditing={editing.endEditing}
         />
       )}
