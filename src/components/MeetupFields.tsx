@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { END_OF_DAY } from "@/lib/events/dates";
 import { MAX_TITLE_LENGTH } from "@/lib/events/validate";
 
 export type MeetupFormValue = { title: string; startDate: string; endDate: string; dayStart: string; dayEnd: string };
@@ -45,9 +46,17 @@ export function MeetupFields({ value, onChange, minDate, maxDate, fieldErrors, c
         </label>
         <label>
           하루 끝
-          <input type="time" step={1800} value={value.dayEnd} onChange={(e) => onChange({ dayEnd: e.target.value })} required />
+          {/* 저장된 자정(24:00)은 시각 입력칸이 못 보여 주므로 00:00으로 보여 준다. 끝에 입력한 00:00은 서버가 자정으로 본다. */}
+          <input
+            type="time"
+            step={1800}
+            value={value.dayEnd === END_OF_DAY ? "00:00" : value.dayEnd}
+            onChange={(e) => onChange({ dayEnd: e.target.value })}
+            required
+          />
         </label>
       </div>
+      <p className="meta">하루 끝을 00:00으로 정하면 그날 자정(24:00)까지예요.</p>
       {fieldErrors.time && <span className="field-error">{fieldErrors.time}</span>}
       {children}
     </>

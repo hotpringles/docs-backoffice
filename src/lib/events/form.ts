@@ -1,4 +1,5 @@
 import type { Person } from "@/lib/people";
+import { END_OF_DAY } from "./dates";
 import type { EventRecord } from "./store";
 
 /** 일정 폼에 입력 중인 값. 종일이면 시각 칸은 무시된다. `endDate`가 빈 문자열이면 하루짜리 일정이다. */
@@ -40,7 +41,8 @@ export function formFromEvent(event: EventRecord, people: Person[]): EventFormSt
     endDate: event.endDate ?? "",
     allDay: event.startTime === null,
     startTime: event.startTime ?? "09:00",
-    endTime: event.endTime ?? "10:00",
+    // 저장된 자정(24:00)은 시각 입력칸이 못 보여 주므로 00:00으로 채운다(끝 시각의 00:00은 자정으로 되돌아간다).
+    endTime: event.endTime === END_OF_DAY ? "00:00" : (event.endTime ?? "10:00"),
     memo: event.memo ?? "",
     attendeeIds: event.attendeeIds.filter((id) => people.some((person) => person.id === id)),
     remindOffsets: [...event.remindOffsets],

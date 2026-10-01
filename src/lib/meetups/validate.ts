@@ -1,5 +1,5 @@
 import { shortDayLabel } from "@/lib/calendar/view";
-import { isValidTime } from "@/lib/events/dates";
+import { isValidEndTime, isValidTime, normalizeEndTime } from "@/lib/events/dates";
 import { MAX_TITLE_LENGTH, parseRemindOffsets } from "@/lib/events/validate";
 import type { Person } from "@/lib/people";
 import {
@@ -71,8 +71,9 @@ export function validateMeetupInput(raw: unknown, today: string, keepDates: stri
   const start = blankToNull(raw.dayStart);
   const end = blankToNull(raw.dayEnd);
   const dayStart = start === undefined ? undefined : (start ?? DEFAULT_DAY_START);
-  const dayEnd = end === undefined ? undefined : (end ?? DEFAULT_DAY_END);
-  if (dayStart === undefined || dayEnd === undefined || !isValidTime(dayStart) || !isValidTime(dayEnd)) {
+  // 하루 끝 00:00은 그날 자정(24:00)이다(시각 입력칸으로는 24:00을 입력할 수 없다).
+  const dayEnd = end === undefined ? undefined : normalizeEndTime(end ?? DEFAULT_DAY_END);
+  if (dayStart === undefined || dayEnd === undefined || !isValidTime(dayStart) || !isValidEndTime(dayEnd)) {
     errors.time = "하루 시작·끝 시각을 HH:MM으로 입력해 주세요.";
   } else if (minutesOf(dayStart) % SLOT_MINUTES !== 0 || minutesOf(dayEnd) % SLOT_MINUTES !== 0) {
     errors.time = "하루 시작·끝 시각은 30분 단위여야 해요.";
@@ -126,9 +127,9 @@ export function validateConfirmInput(raw: unknown, meetup: MeetupShape): Result<
   if (!meetup.dates.includes(day)) errors.day = "후보 날짜 중에서 골라 주세요.";
 
   const startTime = typeof raw.startTime === "string" ? raw.startTime : "";
-  const endTime = typeof raw.endTime === "string" ? raw.endTime : "";
+  const endTime = typeof raw.endTime === "string" ? normalizeEndTime(raw.endTime) : "";
   const startSlot = isValidTime(startTime) ? boundaryOf(meetup.dayStart, meetup.dayEnd, startTime, meetup.slotMinutes) : null;
-  const endSlot = isValidTime(endTime) ? boundaryOf(meetup.dayStart, meetup.dayEnd, endTime, meetup.slotMinutes) : null;
+  const endSlot = isValidEndTime(endTime) ? boundaryOf(meetup.dayStart, meetup.dayEnd, endTime, meetup.slotMinutes) : null;
   if (startSlot === null || endSlot === null) {
     errors.time = `시각은 ${meetup.dayStart}~${meetup.dayEnd} 안의 30분 단위여야 해요.`;
   } else if (endSlot <= startSlot) {

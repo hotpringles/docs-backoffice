@@ -118,13 +118,13 @@ describe("validateEventInput — 시각", () => {
   });
 
   it("종료가 시작과 같거나 앞서면 거부한다", () => {
-    for (const [startTime, endTime] of [["14:00", "14:00"], ["14:00", "13:59"], ["23:59", "00:00"]]) {
+    for (const [startTime, endTime] of [["14:00", "14:00"], ["14:00", "13:59"]]) {
       expect(errors({ title: "a", date: "2026-10-07", startTime, endTime }).time, `${startTime}~${endTime}`).toContain("뒤");
     }
   });
 
   it("HH:MM이 아니면 거부한다", () => {
-    for (const [startTime, endTime] of [["9:00", "10:00"], ["09:00", "24:00"], ["09:00", "10:60"], ["abc", "10:00"], [900, 1000]]) {
+    for (const [startTime, endTime] of [["9:00", "10:00"], ["09:00", "24:01"], ["09:00", "10:60"], ["abc", "10:00"], [900, 1000]]) {
       expect(errors({ title: "a", date: "2026-10-07", startTime, endTime }).time, `${startTime}~${endTime}`).toBeTruthy();
     }
   });

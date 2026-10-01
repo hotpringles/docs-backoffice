@@ -121,7 +121,7 @@ describe("validateMeetupInput", () => {
       { dayStart: "12:00", dayEnd: "09:00" },
       { dayStart: "10:00", dayEnd: "10:00" },
       { dayStart: "9:00", dayEnd: "12:00" },
-      { dayStart: "09:00", dayEnd: "24:00" },
+      { dayStart: "09:00", dayEnd: "24:30" },
       { dayStart: 900, dayEnd: 1200 },
     ];
     for (const range of cases) {

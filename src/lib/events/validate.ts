@@ -1,5 +1,5 @@
 import type { Person } from "@/lib/people";
-import { compareTimes, daysBetween, isInSupportedRange, isValidDate, isValidTime } from "./dates";
+import { compareTimes, daysBetween, isInSupportedRange, isValidDate, isValidEndTime, isValidTime, normalizeEndTime } from "./dates";
 
 export type EventInput = {
   title: string;
@@ -83,7 +83,9 @@ export function validateEventInput(raw: unknown, people: Person[]): ValidationRe
   let startTime: string | null = null;
   let endTime: string | null = null;
   const start = blankToNull(body.startTime);
-  const end = blankToNull(body.endTime);
+  const rawEndTime = blankToNull(body.endTime);
+  // 끝 시각 00:00은 그날 자정(24:00)이다(시각 입력칸으로는 24:00을 입력할 수 없다).
+  const end = typeof rawEndTime === "string" ? normalizeEndTime(rawEndTime) : rawEndTime;
   if (start === undefined || end === undefined) {
     errors.time = "시각이 올바르지 않아요.";
   } else if (start === null && end === null) {
@@ -92,8 +94,8 @@ export function validateEventInput(raw: unknown, people: Person[]): ValidationRe
     errors.time = "기간이 있는 일정은 종일로만 정할 수 있어요.";
   } else if (start === null || end === null) {
     errors.time = "시작과 종료 시각을 함께 입력해 주세요.";
-  } else if (!isValidTime(start) || !isValidTime(end)) {
-    errors.time = "시각은 00:00부터 23:59 사이의 HH:MM 형식이어야 해요.";
+  } else if (!isValidTime(start) || !isValidEndTime(end)) {
+    errors.time = "시각은 HH:MM 형식이어야 해요(끝 시각은 24:00, 자정까지 정할 수 있어요).";
   } else if (compareTimes(end, start) <= 0) {
     errors.time = "종료 시각은 시작 시각보다 뒤여야 해요.";
   } else {

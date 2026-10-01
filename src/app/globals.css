@@ -1245,7 +1245,9 @@ body:has(.cal-page) {
     grid-row: 1;
     justify-self: end;
     margin-right: 3.5rem; /* 본문과의 간격 */
-    width: min(15rem, calc(100% - 3.5rem));
+    /* 오른쪽 여백(0.75rem)은 목차가 길어서 스크롤이 생겼을 때 스크롤바와 목차 글자 사이의 간격이다. 글자 칸의 폭(15rem)은 그대로다. */
+    padding-right: 0.75rem;
+    width: min(15.75rem, calc(100% - 3.5rem));
     position: sticky;
     top: 1.5rem;
     align-self: start;
@@ -1287,6 +1289,8 @@ body:has(.cal-page) {
 .toc a {
   color: var(--muted);
   text-decoration: none;
+  /* 띄어쓰기 없이 긴 경로(frontend/docs/api/...)도 목차 칸 안에서 줄을 바꾼다. 안 그러면 스크롤바 밑까지 삐져나간다. */
+  overflow-wrap: anywhere;
 }
 
 .toc a:hover {

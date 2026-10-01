@@ -71,6 +71,22 @@ export function isValidTime(value: string): boolean {
   return TIME_PATTERN.test(value);
 }
 
+/**
+ * 하루의 끝(자정)은 끝 시각으로만 쓸 수 있고 "24:00"으로 저장한다(Postgres의 time은 24:00을 받는다).
+ * 시각 입력칸(<input type="time">)은 24:00을 만들 수 없어서 자정을 00:00으로 입력하는데, 끝 시각의 "00:00"은 그날의 끝으로 본다.
+ */
+export const END_OF_DAY = "24:00";
+
+/** 끝 시각으로 올바른 값: 00:00~23:59와 24:00. */
+export function isValidEndTime(value: string): boolean {
+  return value === END_OF_DAY || isValidTime(value);
+}
+
+/** 끝 시각 "00:00"은 그날의 끝(24:00)으로 바꾼다. 다른 값은 그대로 돌려준다. */
+export function normalizeEndTime(value: string): string {
+  return value === "00:00" ? END_OF_DAY : value;
+}
+
 /** "HH:MM"은 고정 폭이라 문자열 순서가 시각 순서다. */
 export function compareTimes(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;

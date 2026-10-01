@@ -94,6 +94,7 @@ export function EventDialog({ editing, people }: { editing: EventEditing; people
               />
             </div>
           )}
+          {!draft.form.allDay && <p className="meta">종료 시각을 00:00으로 정하면 그날 자정(24:00)까지예요.</p>}
           {fieldErrors.time && <span className="field-error">{fieldErrors.time}</span>}
 
           <label>
