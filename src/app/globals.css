@@ -381,6 +381,7 @@ body:has(.cal-page) {
 }
 
 .cal {
+  --lane-h: 1.15rem; /* 기간 일정 막대 한 줄의 높이(간격 포함) */
   flex: 1;
   min-height: 0;
   display: grid;
@@ -391,6 +392,7 @@ body:has(.cal-page) {
 }
 
 .cal-row {
+  position: relative; /* 기간 일정 막대(.cal-spans)를 이 주 위에 얹는다 */
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   min-height: 0;
@@ -463,7 +465,8 @@ body:has(.cal-page) {
 
 .cal-day {
   align-self: flex-start;
-  margin-bottom: 0.15rem;
+  /* 이 주에 기간 일정 막대가 있으면(--lanes 줄) 그만큼 아래로 비켜서 한 칸짜리 일정이 막대와 겹치지 않게 한다. */
+  margin-bottom: calc(0.15rem + var(--lanes, 0) * var(--lane-h));
   font-size: 0.85rem;
   line-height: 1.5rem;
 }
@@ -494,6 +497,47 @@ body:has(.cal-page) {
 .cal-event.meetup {
   background: var(--meetup-bg);
   color: var(--meetup-fg);
+}
+
+/*
+ * 기간이 있는 일정: 걸친 날짜 칸들 위에 얹는 하나의 긴 줄. 날짜 숫자 바로 아래 줄(lane)부터 쌓인다.
+ * 터치는 통과시켜서(pointer-events: none) 아래 날짜 칸이 받는다. 이전 주에서 이어지거나 다음 주로 이어지는 쪽은 끝을 둥글게 하지 않는다.
+ */
+.cal-spans {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cal-span {
+  position: absolute;
+  top: calc(2.1rem + var(--lane) * var(--lane-h));
+  left: calc(var(--col) / 7 * 100% + 3px);
+  right: calc((7 - var(--col) - var(--span)) / 7 * 100% + 3px);
+  height: 1rem;
+  padding: 0 0.4rem;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--event-fg);
+  font-size: 0.68rem;
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-span.cont-left {
+  left: calc(var(--col) / 7 * 100%);
+  padding-left: 0.5rem;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.cal-span.cont-right {
+  right: calc((7 - var(--col) - var(--span)) / 7 * 100%);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .cal-more {
@@ -703,6 +747,13 @@ body:has(.cal-page) {
   background: var(--bg);
   color: var(--fg);
   font: inherit;
+}
+
+/* 끝 날짜 입력칸과 '기간 없애기' 버튼을 한 줄에 */
+.end-date-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .event-form fieldset {

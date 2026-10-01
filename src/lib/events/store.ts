@@ -8,6 +8,7 @@ type EventRow = {
   id: number;
   title: string;
   date: string;
+  end_date: string | null;
   start_time: string | null;
   end_time: string | null;
   memo: string | null;
@@ -20,6 +21,7 @@ type EventRow = {
 const SELECT_EVENT = `
   select id, title,
          to_char(event_date, 'YYYY-MM-DD') as date,
+         to_char(end_date, 'YYYY-MM-DD') as end_date,
          to_char(start_time, 'HH24:MI') as start_time,
          to_char(end_time, 'HH24:MI') as end_time,
          memo, attendee_ids, remind_offsets, meetup_id
@@ -30,6 +32,7 @@ function toRecord(row: EventRow): EventRecord {
     id: row.id,
     title: row.title,
     date: row.date,
+    endDate: row.end_date,
     startTime: row.start_time,
     endTime: row.end_time,
     memo: row.memo,
@@ -41,10 +44,10 @@ function toRecord(row: EventRow): EventRecord {
 
 export async function createEvent(db: Db, input: EventInput): Promise<number> {
   const rows = await db.query<{ id: number }>(
-    `insert into events (title, event_date, start_time, end_time, memo, attendee_ids, remind_offsets)
-     values ($1, $2::date, $3::time, $4::time, $5, $6::text[], $7::integer[])
+    `insert into events (title, event_date, end_date, start_time, end_time, memo, attendee_ids, remind_offsets)
+     values ($1, $2::date, $3::date, $4::time, $5::time, $6, $7::text[], $8::integer[])
      returning id`,
-    [input.title, input.date, input.startTime, input.endTime, input.memo, input.attendeeIds, input.remindOffsets],
+    [input.title, input.date, input.endDate, input.startTime, input.endTime, input.memo, input.attendeeIds, input.remindOffsets],
   );
   return rows[0].id;
 }
@@ -61,8 +64,8 @@ export async function updateEvent(db: Db, id: number, input: EventInput): Promis
      ),
      upd as (
        update events
-          set title = $2, event_date = $3::date, start_time = $4::time, end_time = $5::time, memo = $6,
-              attendee_ids = $7::text[], remind_offsets = $8::integer[], updated_at = now()
+          set title = $2, event_date = $3::date, end_date = $4::date, start_time = $5::time, end_time = $6::time, memo = $7,
+              attendee_ids = $8::text[], remind_offsets = $9::integer[], updated_at = now()
         where id = $1
         returning event_date, remind_offsets
      ),
@@ -75,7 +78,7 @@ export async function updateEvent(db: Db, id: number, input: EventInput): Promis
           )
      )
      select id from events where id = $1 and exists (select 1 from upd)`,
-    [id, input.title, input.date, input.startTime, input.endTime, input.memo, input.attendeeIds, input.remindOffsets],
+    [id, input.title, input.date, input.endDate, input.startTime, input.endTime, input.memo, input.attendeeIds, input.remindOffsets],
   );
   return rows.length > 0;
 }
@@ -105,10 +108,13 @@ export async function getEvent(db: Db, id: number): Promise<EventRecord | null> 
   return rows[0] ? toRecord(rows[0]) : null;
 }
 
-/** 두 날짜 사이(양 끝 포함)의 일정. 날짜 → 종일이 먼저 → 시작 시각 → 번호 순. */
+/**
+ * 두 날짜 사이(양 끝 포함)와 하루라도 겹치는 일정. 기간 일정은 시작이 범위 앞이어도 범위 안으로 이어지면 들어온다.
+ * 날짜 → 종일이 먼저 → 시작 시각 → 번호 순.
+ */
 export async function listEventsInRange(db: Db, from: string, to: string): Promise<EventRecord[]> {
   const rows = await db.query<EventRow>(
-    `${SELECT_EVENT} where event_date between $1::date and $2::date order by event_date, start_time nulls first, id`,
+    `${SELECT_EVENT} where event_date <= $2::date and coalesce(end_date, event_date) >= $1::date order by event_date, start_time nulls first, id`,
     [from, to],
   );
   return rows.map(toRecord);

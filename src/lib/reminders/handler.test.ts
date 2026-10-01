@@ -34,6 +34,7 @@ const seedEvent = () =>
   createEvent(db, {
     title: "스터디",
     date: "2026-10-07",
+    endDate: null,
     startTime: "14:00",
     endTime: "16:00",
     memo: null,

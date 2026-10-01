@@ -5,6 +5,7 @@ import { createMemoryDb } from "./memory";
 const input = {
   title: "미리보기 일정",
   date: "2026-10-07",
+  endDate: null,
   startTime: null,
   endTime: null,
   memo: null,

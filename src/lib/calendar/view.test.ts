@@ -8,6 +8,7 @@ const event = (id: number, date: string, overrides: Partial<EventRecord> = {}): 
   meetupId: null,
   title: `일정 ${id}`,
   date,
+  endDate: null,
   startTime: null,
   endTime: null,
   memo: null,

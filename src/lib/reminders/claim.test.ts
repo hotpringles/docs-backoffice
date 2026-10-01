@@ -19,6 +19,7 @@ afterEach(async () => {
 const ev = (title: string, date: string, overrides: Partial<EventInput> = {}): EventInput => ({
   title,
   date,
+  endDate: null,
   startTime: null,
   endTime: null,
   memo: null,

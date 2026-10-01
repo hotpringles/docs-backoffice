@@ -1,9 +1,12 @@
 import type { Person } from "@/lib/people";
-import { compareTimes, isInSupportedRange, isValidDate, isValidTime } from "./dates";
+import { compareTimes, daysBetween, isInSupportedRange, isValidDate, isValidTime } from "./dates";
 
 export type EventInput = {
   title: string;
+  /** 시작 날짜. 알림도 이 날짜를 기준으로 간다. */
   date: string;
+  /** 끝 날짜. 기간이 있는 일정일 때만 값이 있고(시작 날짜보다 뒤), 하루짜리는 null이다. */
+  endDate: string | null;
   startTime: string | null;
   endTime: string | null;
   memo: string | null;
@@ -11,7 +14,7 @@ export type EventInput = {
   remindOffsets: number[];
 };
 
-export type EventField = "title" | "date" | "time" | "memo" | "attendeeIds" | "remindOffsets";
+export type EventField = "title" | "date" | "endDate" | "time" | "memo" | "attendeeIds" | "remindOffsets";
 export type FieldErrors = Partial<Record<EventField, string>>;
 export type ValidationResult = { ok: true; value: EventInput } | { ok: false; errors: FieldErrors };
 
@@ -20,6 +23,8 @@ export const REMIND_OPTIONS = [0, 1, 3] as const;
 export const DEFAULT_REMIND_OFFSETS: readonly number[] = [0, 1];
 export const MAX_TITLE_LENGTH = 100;
 export const MAX_MEMO_LENGTH = 500;
+/** 기간 일정의 최대 길이(시작·끝 날짜를 포함한 일 수). */
+export const MAX_EVENT_DAYS = 366;
 
 /** 이모지도 한 글자로 센다. */
 const length = (text: string) => [...text].length;
@@ -60,6 +65,21 @@ export function validateEventInput(raw: unknown, people: Person[]): ValidationRe
   if (!isValidDate(date)) errors.date = "날짜를 YYYY-MM-DD 형식으로 입력해 주세요.";
   else if (!isInSupportedRange(date)) errors.date = "2000년부터 2100년 사이의 날짜만 쓸 수 있어요.";
 
+  // 끝 날짜: 비면 하루짜리, 시작 날짜와 같아도 하루짜리, 시작보다 뒤면 기간 일정이다.
+  let endDate: string | null = null;
+  const rawEnd = blankToNull(body.endDate);
+  if (rawEnd === undefined || (rawEnd !== null && !isValidDate(rawEnd))) {
+    errors.endDate = "끝 날짜를 YYYY-MM-DD 형식으로 입력해 주세요.";
+  } else if (rawEnd !== null && !isInSupportedRange(rawEnd)) {
+    errors.endDate = "2000년부터 2100년 사이의 날짜만 쓸 수 있어요.";
+  } else if (rawEnd !== null && !errors.date) {
+    if (rawEnd < date) errors.endDate = "끝 날짜는 시작 날짜보다 빠를 수 없어요.";
+    else if (rawEnd > date) {
+      if (daysBetween(date, rawEnd) + 1 > MAX_EVENT_DAYS) errors.endDate = `기간은 최대 ${MAX_EVENT_DAYS}일까지 정할 수 있어요.`;
+      else endDate = rawEnd;
+    }
+  }
+
   let startTime: string | null = null;
   let endTime: string | null = null;
   const start = blankToNull(body.startTime);
@@ -68,6 +88,8 @@ export function validateEventInput(raw: unknown, people: Person[]): ValidationRe
     errors.time = "시각이 올바르지 않아요.";
   } else if (start === null && end === null) {
     // 종일 일정
+  } else if (endDate !== null) {
+    errors.time = "기간이 있는 일정은 종일로만 정할 수 있어요.";
   } else if (start === null || end === null) {
     errors.time = "시작과 종료 시각을 함께 입력해 주세요.";
   } else if (!isValidTime(start) || !isValidTime(end)) {
@@ -109,5 +131,5 @@ export function validateEventInput(raw: unknown, people: Person[]): ValidationRe
   const remindOffsets = parsedOffsets ?? [...DEFAULT_REMIND_OFFSETS];
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { title, date, startTime, endTime, memo, attendeeIds, remindOffsets } };
+  return { ok: true, value: { title, date, endDate, startTime, endTime, memo, attendeeIds, remindOffsets } };
 }

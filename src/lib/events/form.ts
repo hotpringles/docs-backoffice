@@ -1,10 +1,11 @@
 import type { Person } from "@/lib/people";
 import type { EventRecord } from "./store";
 
-/** 일정 폼에 입력 중인 값. 종일이면 시각 칸은 무시된다. */
+/** 일정 폼에 입력 중인 값. 종일이면 시각 칸은 무시된다. `endDate`가 빈 문자열이면 하루짜리 일정이다. */
 export type EventFormState = {
   title: string;
   date: string;
+  endDate: string;
   allDay: boolean;
   startTime: string;
   endTime: string;
@@ -17,6 +18,7 @@ export function emptyForm(date: string): EventFormState {
   return {
     title: "",
     date,
+    endDate: "",
     allDay: true,
     startTime: "09:00",
     endTime: "10:00",
@@ -35,6 +37,7 @@ export function formFromEvent(event: EventRecord, people: Person[]): EventFormSt
   return {
     title: event.title,
     date: event.date,
+    endDate: event.endDate ?? "",
     allDay: event.startTime === null,
     startTime: event.startTime ?? "09:00",
     endTime: event.endTime ?? "10:00",
@@ -44,17 +47,30 @@ export function formFromEvent(event: EventRecord, people: Person[]): EventFormSt
   };
 }
 
-/** 서버로 보낼 본문. 종일이면 시각은 null로 보낸다. */
+/** 서버로 보낼 본문. 종일이거나 기간 일정이면 시각은 null로 보낸다(기간 일정은 종일뿐이다). */
 export function formToPayload(form: EventFormState): Record<string, unknown> {
+  const timed = !form.allDay && form.endDate === "";
   return {
     title: form.title,
     date: form.date,
-    startTime: form.allDay ? null : form.startTime,
-    endTime: form.allDay ? null : form.endTime,
+    endDate: form.endDate === "" ? null : form.endDate,
+    startTime: timed ? form.startTime : null,
+    endTime: timed ? form.endTime : null,
     memo: form.memo,
     attendeeIds: form.attendeeIds,
     remindOffsets: form.remindOffsets,
   };
+}
+
+/**
+ * 폼 값을 고친다. 끝 날짜를 정하면 기간 일정이라 종일이 되고, 시작 날짜를 끝 날짜 이후로 옮기면 끝 날짜를 비운다
+ * (그러지 않으면 "끝이 시작보다 빠름" 오류가 나서 저장할 수 없다).
+ */
+export function patchForm(form: EventFormState, update: Partial<EventFormState>): EventFormState {
+  const next = { ...form, ...update };
+  if (update.endDate !== undefined && update.endDate !== "") next.allDay = true;
+  if (update.date !== undefined && update.endDate === undefined && next.endDate !== "" && next.endDate <= next.date) next.endDate = "";
+  return next;
 }
 
 /** 체크박스용: 없으면 더하고 있으면 뺀 새 배열. */

@@ -7,6 +7,7 @@ import type { EventInput } from "./validate";
 const base: EventInput = {
   title: "회의",
   date: "2026-10-07",
+  endDate: null,
   startTime: null,
   endTime: null,
   memo: null,
@@ -36,6 +37,7 @@ describe("createEvent / getEvent", () => {
     const input: EventInput = {
       title: "스터디",
       date: "2026-10-07",
+      endDate: null,
       startTime: "14:00",
       endTime: "16:30",
       memo: "3층 회의실",

@@ -47,9 +47,33 @@ export function EventDialog({ editing, people }: { editing: EventEditing; people
             {fieldErrors.date && <span className="field-error">{fieldErrors.date}</span>}
           </label>
 
+          <label>
+            끝 날짜 (기간이 있는 일정이면)
+            <span className="end-date-row">
+              <input
+                type="date"
+                aria-label="끝 날짜"
+                value={draft.form.endDate}
+                min={draft.form.date}
+                onChange={(e) => editing.patch({ endDate: e.target.value })}
+              />
+              {draft.form.endDate !== "" && (
+                <button type="button" onClick={() => editing.patch({ endDate: "" })}>
+                  기간 없애기
+                </button>
+              )}
+            </span>
+            {fieldErrors.endDate && <span className="field-error">{fieldErrors.endDate}</span>}
+          </label>
+
           <label className="check">
-            <input type="checkbox" checked={draft.form.allDay} onChange={(e) => editing.patch({ allDay: e.target.checked })} />
-            종일
+            <input
+              type="checkbox"
+              checked={draft.form.allDay}
+              disabled={draft.form.endDate !== ""}
+              onChange={(e) => editing.patch({ allDay: e.target.checked })}
+            />
+            종일{draft.form.endDate !== "" && " (기간 일정은 종일로만 정해요)"}
           </label>
           {!draft.form.allDay && (
             <div className="time-row">

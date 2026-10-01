@@ -25,6 +25,7 @@ describe("validateEventInput — 통과하는 입력", () => {
     expect(valid({ title: "  회의 ", date: "2026-10-07" })).toEqual({
       title: "회의",
       date: "2026-10-07",
+      endDate: null,
       startTime: null,
       endTime: null,
       memo: null,
@@ -47,6 +48,7 @@ describe("validateEventInput — 통과하는 입력", () => {
     ).toEqual({
       title: "스터디",
       date: "2026-10-07",
+      endDate: null,
       startTime: "14:00",
       endTime: "16:30",
       memo: "3층",

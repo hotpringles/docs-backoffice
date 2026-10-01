@@ -10,6 +10,7 @@ const event = (id: number, date: string, title: string, meetupId: number | null 
   id,
   title,
   date,
+  endDate: null,
   startTime: null,
   endTime: null,
   memo: null,

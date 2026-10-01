@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { deleteEvent, login, saveEvent, type ApiError } from "@/lib/events/client";
-import { emptyForm, formFromEvent, formToPayload, type EventFormState } from "@/lib/events/form";
+import { emptyForm, formFromEvent, formToPayload, patchForm, type EventFormState } from "@/lib/events/form";
 import type { EventRecord } from "@/lib/events/store";
 import type { FieldErrors } from "@/lib/events/validate";
 import type { Person } from "@/lib/people";
@@ -117,7 +117,7 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
   }
 
   function patch(update: Partial<EventFormState>) {
-    setDraft((current) => (current ? { ...current, form: { ...current.form, ...update } } : current));
+    setDraft((current) => (current ? { ...current, form: patchForm(current.form, update) } : current));
   }
 
   function cancel() {

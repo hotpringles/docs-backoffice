@@ -164,6 +164,7 @@ describe("confirmMeetup", () => {
       meetupId: id,
       title: "스터디 일정",
       date: D1,
+      endDate: null,
       startTime: "10:00",
       endTime: "11:30",
       memo: null,
@@ -240,7 +241,7 @@ describe("getMeetupEventId / deleteMeetup", () => {
     const other = await createMeetup(db, { ...input, title: "다른 모임" });
     const mineEvent = (await confirmMeetup(db, mine, span, roster)) as number;
     const otherEvent = (await confirmMeetup(db, other, span, roster)) as number;
-    const plain = await createEvent(db, { title: "직접 만든 일정", date: D1, startTime: null, endTime: null, memo: null, attendeeIds: [], remindOffsets: [0] });
+    const plain = await createEvent(db, { title: "직접 만든 일정", date: D1, endDate: null, startTime: null, endTime: null, memo: null, attendeeIds: [], remindOffsets: [0] });
 
     expect(await deleteMeetup(db, mine)).toBe(true);
 
@@ -251,7 +252,7 @@ describe("getMeetupEventId / deleteMeetup", () => {
 
   it("확정 전의 열린 모임을 지워도 달력 일정은 건드리지 않는다", async () => {
     const open = await createMeetup(db, input);
-    const plain = await createEvent(db, { title: "직접 만든 일정", date: D1, startTime: null, endTime: null, memo: null, attendeeIds: [], remindOffsets: [0] });
+    const plain = await createEvent(db, { title: "직접 만든 일정", date: D1, endDate: null, startTime: null, endTime: null, memo: null, attendeeIds: [], remindOffsets: [0] });
     expect(await deleteMeetup(db, open)).toBe(true);
     expect(await getEvent(db, plain)).not.toBeNull();
   });

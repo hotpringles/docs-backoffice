@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Ref } from "react";
-import { dayLabel, formatTimeRange, remindLabel } from "@/lib/calendar/view";
+import { dayLabel, eventWhenLabel, remindLabel } from "@/lib/calendar/view";
 import type { EventRecord } from "@/lib/events/store";
 import { nameOf, type Person } from "@/lib/people";
 
@@ -49,7 +49,7 @@ export function DayPopover({ ref, date, events, people, busy, error, onClose, on
                   <Link href={`/meetups/${event.meetupId}`}>모임에서 확정된 일정</Link>
                 </p>
               )}
-              <p className="event-meta">{formatTimeRange(event)}</p>
+              <p className="event-meta">{eventWhenLabel(event)}</p>
               {event.memo && <p className="event-memo">{event.memo}</p>}
               {event.attendeeIds.length > 0 && (
                 <p className="event-meta">참석: {event.attendeeIds.map((id) => nameOf(people, id)).join(", ")}</p>

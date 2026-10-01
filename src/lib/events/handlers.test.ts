@@ -15,6 +15,7 @@ const COOKIE = `${SESSION_COOKIE}=${createSessionToken(SECRET, NOW.getTime())}`;
 const stored: EventInput = {
   title: "원래 일정",
   date: "2026-10-07",
+  endDate: null,
   startTime: null,
   endTime: null,
   memo: null,
@@ -45,7 +46,7 @@ const all = () => listEventsInRange(db, "2000-01-01", "2100-12-31");
 describe("create", () => {
   it("편집 권한이 있으면 저장하고 201과 번호를 준다", async () => {
     const response = await createEventHandlers(deps()).create(
-      post({ title: " 스터디 ", date: "2026-10-08", startTime: "14:00", endTime: "16:00", attendeeIds: ["p2", "p1"], remindOffsets: [0] }),
+      post({ title: " 스터디 ", date: "2026-10-08", endDate: null, startTime: "14:00", endTime: "16:00", attendeeIds: ["p2", "p1"], remindOffsets: [0] }),
     );
     expect(response.status).toBe(201);
     const { id } = await response.json();
@@ -54,6 +55,7 @@ describe("create", () => {
       meetupId: null,
       title: "스터디",
       date: "2026-10-08",
+      endDate: null,
       startTime: "14:00",
       endTime: "16:00",
       memo: null,

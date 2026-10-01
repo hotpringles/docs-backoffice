@@ -14,6 +14,7 @@ describe("emptyForm", () => {
     expect(emptyForm("2026-10-07")).toEqual({
       title: "",
       date: "2026-10-07",
+      endDate: "",
       allDay: true,
       startTime: "09:00",
       endTime: "10:00",
@@ -30,6 +31,7 @@ describe("formFromEvent / formToPayload", () => {
     meetupId: null,
     title: "스터디",
     date: "2026-10-07",
+    endDate: null,
     startTime: "14:00",
     endTime: "16:30",
     memo: "3층",
@@ -42,6 +44,7 @@ describe("formFromEvent / formToPayload", () => {
     expect(form).toEqual({
       title: "스터디",
       date: "2026-10-07",
+      endDate: "",
       allDay: false,
       startTime: "14:00",
       endTime: "16:30",
@@ -52,6 +55,7 @@ describe("formFromEvent / formToPayload", () => {
     expect(formToPayload(form)).toEqual({
       title: "스터디",
       date: "2026-10-07",
+      endDate: null,
       startTime: "14:00",
       endTime: "16:30",
       memo: "3층",
