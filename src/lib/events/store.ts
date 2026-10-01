@@ -85,18 +85,15 @@ export async function updateEvent(db: Db, id: number, input: EventInput): Promis
 
 /**
  * 일정을 지운다(알림 기록은 함께 지워진다). 없는 일정이면 false.
- * 모임을 확정해서 만든 일정이면, 같은 문장 안에서 그 모임을 다시 '열림'으로 돌린다. 그러지 않으면 달력에 일정이 없는데 모임만
- * '확정됨'으로 남아서, 바꿀 수도 다시 확정할 수도 없는 상태가 된다.
- * 이때 "확정 알림을 보냈다"는 기록(sent_notices)도 함께 지운다: 다시 확정하는 것은 새 확정이라 알림이 다시 가야 한다.
- * (지우지 않으면 모임당 한 번 규칙 때문에 두 번째 확정에는 알림이 가지 않는다.)
+ * 모임을 확정해서 만든 일정이면, 같은 문장 안에서 그 모임도 통째로 삭제한다(가능한 시간 표시는 함께 지워지고, 모임 알림 기록
+ * sent_notices도 정리한다). 일정만 지워지면 달력에 일정이 없는데 모임만 '확정됨'(또는 '열림')으로 남기 때문이다.
+ * 모임을 지울 때 확정 일정도 함께 지우는 deleteMeetup과 짝이다: 어느 쪽에서 지워도 둘이 함께 사라진다.
  */
 export async function deleteEvent(db: Db, id: number): Promise<boolean> {
   const rows = await db.query<{ id: number }>(
     `with d as (delete from events where id = $1 returning id, meetup_id),
-          r as (update meetups set status = 'open', confirmed_at = null
-                 where status = 'confirmed' and id in (select meetup_id from d where meetup_id is not null)
-                 returning id),
-          n as (delete from sent_notices where kind = 'meetup-confirmed' and ref_id in (select id from r))
+          m as (delete from meetups where id in (select meetup_id from d where meetup_id is not null) returning id),
+          n as (delete from sent_notices where kind in ('meetup-opened', 'meetup-confirmed') and ref_id in (select id from m))
      select id from d`,
     [id],
   );

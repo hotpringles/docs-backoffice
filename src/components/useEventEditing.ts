@@ -97,7 +97,7 @@ export function useEventEditing({ people, canEdit }: { people: Person[]; canEdit
   }
 
   async function remove(target: EventRecord) {
-    const note = target.meetupId === null ? "" : " 모임을 확정해서 만든 일정이라, 지우면 그 모임이 다시 '열림'으로 돌아가요.";
+    const note = target.meetupId === null ? "" : " 모임을 확정해서 만든 일정이라, 지우면 그 모임과 가능한 시간 표시도 함께 삭제돼요.";
     if (!window.confirm(`"${target.title}" 일정을 삭제할까요?${note}`)) return;
     setBusy(true);
     setError(null);

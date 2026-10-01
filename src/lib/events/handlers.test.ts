@@ -2,9 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SESSION_COOKIE, createSessionToken } from "@/lib/auth/session";
 import { createTestDb } from "@/lib/db/testing";
 import type { Db } from "@/lib/db/types";
-import { confirmMeetup, createMeetup, getMeetup, getMeetupEventId } from "@/lib/meetups/store";
+import { confirmMeetup, createMeetup, getMeetup, listAvailability, listMeetups, saveAvailability } from "@/lib/meetups/store";
 import { createEventHandlers, type EventDeps } from "./handlers";
-import { createEvent, getEvent, listEventsInRange } from "./store";
+import { createEvent, deleteEvent, getEvent, listEventsInRange } from "./store";
 import type { EventInput } from "./validate";
 
 const SECRET = "s".repeat(32);
@@ -170,17 +170,44 @@ describe("remove", () => {
     const span = { day: "2026-10-07", startSlot: 2, endSlot: 4, startTime: "10:00", endTime: "11:00", remindOffsets: [0] };
     const meetupInput = { title: "스터디", dates: ["2026-10-07"], dayStart: "09:00", dayEnd: "13:00" };
 
-    it("지우면 모임이 다시 열려서(확정 전으로) 새로 확정할 수 있다. 일정이 없는 '확정된 모임'으로 남지 않는다", async () => {
+    it("지우면 그 모임도 가능한 시간 표시와 함께 아예 삭제된다(열린 모임으로 돌아가지 않는다)", async () => {
       const meetupId = await createMeetup(db, meetupInput);
+      await saveAvailability(db, meetupId, "p1", [{ day: "2026-10-07", slot: 2 }]);
       const eventId = (await confirmMeetup(db, meetupId, span, roster)) as number;
       expect((await getMeetup(db, meetupId))?.status).toBe("confirmed");
 
       expect((await createEventHandlers(deps()).remove(post({}), String(eventId))).status).toBe(200);
 
       expect(await getEvent(db, eventId)).toBeNull();
-      expect((await getMeetup(db, meetupId))?.status).toBe("open");
-      expect(await getMeetupEventId(db, meetupId)).toBeNull();
-      expect(await confirmMeetup(db, meetupId, span, roster)).not.toBeNull();
+      expect(await getMeetup(db, meetupId)).toBeNull();
+      expect(await listAvailability(db, meetupId)).toEqual({});
+      expect(await listMeetups(db)).toEqual([]);
+    });
+
+    it("지운 모임의 알림 기록(sent_notices)도 함께 지운다", async () => {
+      const meetupId = await createMeetup(db, meetupInput);
+      const eventId = (await confirmMeetup(db, meetupId, span, roster)) as number;
+      await db.query("insert into sent_notices (kind, ref_id) values ('meetup-opened', $1), ('meetup-confirmed', $1), ('meetup-opened', 999)", [meetupId]);
+
+      expect(await deleteEvent(db, eventId)).toBe(true);
+
+      const rows = await db.query<{ kind: string; ref_id: number }>("select kind, ref_id from sent_notices order by ref_id");
+      expect(rows).toEqual([{ kind: "meetup-opened", ref_id: 999 }]);
+    });
+
+    it("다른 모임이나 열린 모임은 건드리지 않는다", async () => {
+      const mine = await createMeetup(db, meetupInput);
+      const mineEvent = (await confirmMeetup(db, mine, span, roster)) as number;
+      const other = await createMeetup(db, { ...meetupInput, title: "다른 모임" });
+      const otherEvent = (await confirmMeetup(db, other, span, roster)) as number;
+      const open = await createMeetup(db, { ...meetupInput, title: "열린 모임" });
+
+      expect(await deleteEvent(db, mineEvent)).toBe(true);
+
+      expect(await getMeetup(db, mine)).toBeNull();
+      expect((await getMeetup(db, other))?.status).toBe("confirmed");
+      expect(await getEvent(db, otherEvent)).not.toBeNull();
+      expect((await getMeetup(db, open))?.status).toBe("open");
     });
 
     it("다른 일정을 지워도 모임은 확정된 채로 그대로다", async () => {

@@ -261,22 +261,20 @@ describe("confirm", () => {
     });
   });
 
-  it("확정으로 만든 일정을 지워 모임이 다시 열린 뒤 다시 확정하면, 그 확정도 알림이 간다", async () => {
+  it("달력에서 확정 일정을 지우면 모임이 통째로 삭제되어, 그 모임은 다시 확정할 수 없다(404)", async () => {
     const id = await openMeetup();
     await saveAvailability(db, id, "p1", cells(D1, [2, 3, 4]));
     const handlers = createMeetupHandlers(deps());
     const { eventId } = await (await handlers.confirm(post(CONFIRM), String(id))).json();
     await flush();
-    expect(sender).toHaveBeenCalledTimes(1);
     sender.mockClear();
 
-    // 달력에서 확정 일정을 지우면 모임이 다시 열린다. 새로 확정하는 것이니 알림도 새로 간다(모임당 한 번이 아니라 확정마다 한 번).
     expect(await deleteEvent(db, eventId)).toBe(true);
-    const second = await handlers.confirm(post(CONFIRM), String(id));
-    expect(second.status).toBe(200);
+
+    expect(await getMeetup(db, id)).toBeNull();
+    expect((await handlers.confirm(post(CONFIRM), String(id))).status).toBe(404);
     await flush();
-    expect(sender).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(sender.mock.calls[0][1]).title).toBe("모임 확정");
+    expect(sender).not.toHaveBeenCalled();
   });
 
   it("이미 확정된 모임은 409이고 일정도 알림도 더 만들지 않는다", async () => {
