@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createTestDb } from "@/lib/db/testing";
 import type { Db } from "@/lib/db/types";
-import { getEvent, listEventsInRange } from "@/lib/events/store";
+import { createEvent, getEvent, listEventsInRange } from "@/lib/events/store";
 import type { Person } from "@/lib/people";
 import {
   confirmMeetup,
@@ -220,17 +220,40 @@ describe("getMeetupEventId / deleteMeetup", () => {
     expect(await getMeetupEventId(db, id)).toBeNull();
   });
 
-  it("모임을 지우면 가능한 시간은 함께 지워지고, 확정으로 만든 일정은 남는다(모임 연결만 비워진다)", async () => {
+  it("모임을 지우면 가능한 시간과, 확정으로 만든 달력 일정도 함께 지워진다", async () => {
     const id = await createMeetup(db, input);
     await saveAvailability(db, id, "p1", cells(D1, [2, 3, 4]));
     const eventId = await confirmMeetup(db, id, span, roster);
+    expect(await getEvent(db, eventId as number)).not.toBeNull();
 
     expect(await deleteMeetup(db, id)).toBe(true);
 
     expect(await getMeetup(db, id)).toBeNull();
     expect(await listAvailability(db, id)).toEqual({});
-    expect(await getEvent(db, eventId as number)).toMatchObject({ meetupId: null, title: "스터디 일정" });
+    expect(await getEvent(db, eventId as number)).toBeNull();
+    expect(await getMeetupEventId(db, id)).toBeNull();
     expect(await deleteMeetup(db, id)).toBe(false);
+  });
+
+  it("모임을 지워도 다른 모임이 확정해서 만든 일정과 직접 만든 일정은 그대로다", async () => {
+    const mine = await createMeetup(db, input);
+    const other = await createMeetup(db, { ...input, title: "다른 모임" });
+    const mineEvent = (await confirmMeetup(db, mine, span, roster)) as number;
+    const otherEvent = (await confirmMeetup(db, other, span, roster)) as number;
+    const plain = await createEvent(db, { title: "직접 만든 일정", date: D1, startTime: null, endTime: null, memo: null, attendeeIds: [], remindOffsets: [0] });
+
+    expect(await deleteMeetup(db, mine)).toBe(true);
+
+    expect(await getEvent(db, mineEvent)).toBeNull();
+    expect(await getEvent(db, otherEvent)).toMatchObject({ meetupId: other, title: "다른 모임" });
+    expect(await getEvent(db, plain)).toMatchObject({ title: "직접 만든 일정" });
+  });
+
+  it("확정 전의 열린 모임을 지워도 달력 일정은 건드리지 않는다", async () => {
+    const open = await createMeetup(db, input);
+    const plain = await createEvent(db, { title: "직접 만든 일정", date: D1, startTime: null, endTime: null, memo: null, attendeeIds: [], remindOffsets: [0] });
+    expect(await deleteMeetup(db, open)).toBe(true);
+    expect(await getEvent(db, plain)).not.toBeNull();
   });
 
   it("열린 모임도 지울 수 있다", async () => {

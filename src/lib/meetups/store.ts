@@ -96,9 +96,17 @@ export async function updateMeetup(db: Db, id: number, input: MeetupInput, optio
   return rows.length > 0;
 }
 
-/** 모임을 지운다(가능한 시간은 함께 지워지고, 확정으로 만든 일정은 남고 모임 연결만 비워진다). 없으면 false. */
+/**
+ * 모임을 지운다. 가능한 시간과, 이 모임을 확정해서 만든 달력 일정도 함께 지워진다(일정만 달력에 남는 일이 없도록 한 문장으로).
+ * 다른 모임이 만든 일정과 직접 만든 일정은 건드리지 않는다. 없으면 false.
+ */
 export async function deleteMeetup(db: Db, id: number): Promise<boolean> {
-  const rows = await db.query<{ id: number }>("delete from meetups where id = $1 returning id", [id]);
+  const rows = await db.query<{ id: number }>(
+    `with e as (delete from events where meetup_id = $1),
+          m as (delete from meetups where id = $1 returning id)
+     select id from m`,
+    [id],
+  );
   return rows.length > 0;
 }
 

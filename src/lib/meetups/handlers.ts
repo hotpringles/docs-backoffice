@@ -58,7 +58,7 @@ export function createMeetupHandlers(deps: MeetupDeps) {
       });
     },
 
-    /** 모임 지우기(편집 권한). 확정으로 만든 일정은 남는다. */
+    /** 모임 지우기(편집 권한). 확정으로 만든 달력 일정도 함께 지워진다. */
     remove(request: Request, rawId: string): Promise<Response> {
       return guarded(request, async ({ db }) => {
         if (!MEETUP_ID.test(rawId)) return notFound();

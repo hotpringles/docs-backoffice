@@ -52,7 +52,7 @@ export function MeetupAdmin({ meetupId, title, status, dates, dayStart, slotCoun
   }
 
   async function remove(expire: (action: Action) => void) {
-    if (!window.confirm(`"${title}" 모임을 삭제할까요? 확정으로 만든 일정은 남아요.`)) return;
+    if (!window.confirm(`"${title}" 모임을 삭제할까요? 확정으로 만든 달력 일정도 함께 지워져요.`)) return;
     setBusy(true);
     setError(null);
     const result = await deleteMeetup(browserFetch, meetupId);

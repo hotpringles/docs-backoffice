@@ -403,7 +403,7 @@ describe("remove", () => {
     expect(await getMeetup(db, id)).not.toBeNull();
   });
 
-  it("모임을 지우면 가능한 시간도 지워지고, 확정으로 만든 일정은 남는다. 다시 지우면 404다", async () => {
+  it("모임을 지우면 가능한 시간과 확정으로 만든 달력 일정도 지워진다. 다시 지우면 404다", async () => {
     const id = await openMeetup();
     await saveAvailability(db, id, "p1", cells(D1, [2, 3, 4]));
     const confirmed = await createMeetupHandlers(deps()).confirm(post(CONFIRM), String(id));
@@ -413,7 +413,7 @@ describe("remove", () => {
     expect((await handlers.remove(post({}), String(id))).status).toBe(200);
     expect(await getMeetup(db, id)).toBeNull();
     expect(await listAvailability(db, id)).toEqual({});
-    expect(await getEvent(db, eventId)).toMatchObject({ meetupId: null });
+    expect(await getEvent(db, eventId)).toBeNull();
     expect((await handlers.remove(post({}), String(id))).status).toBe(404);
   });
 
