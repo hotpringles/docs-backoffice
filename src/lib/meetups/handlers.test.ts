@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SESSION_COOKIE, createSessionToken } from "@/lib/auth/session";
 import { createTestDb } from "@/lib/db/testing";
 import type { Db } from "@/lib/db/types";
-import { getEvent, listEventsInRange } from "@/lib/events/store";
+import { deleteEvent, getEvent, listEventsInRange } from "@/lib/events/store";
 import type { Sender } from "@/lib/push/send";
 import { saveSubscription } from "@/lib/push/subscriptions";
 import { createMeetupHandlers, type MeetupDeps } from "./handlers";
@@ -259,6 +259,24 @@ describe("confirm", () => {
       url: "/calendar?month=2026-10&date=2026-10-07",
       tag: `meetup-confirmed-${id}`,
     });
+  });
+
+  it("확정으로 만든 일정을 지워 모임이 다시 열린 뒤 다시 확정하면, 그 확정도 알림이 간다", async () => {
+    const id = await openMeetup();
+    await saveAvailability(db, id, "p1", cells(D1, [2, 3, 4]));
+    const handlers = createMeetupHandlers(deps());
+    const { eventId } = await (await handlers.confirm(post(CONFIRM), String(id))).json();
+    await flush();
+    expect(sender).toHaveBeenCalledTimes(1);
+    sender.mockClear();
+
+    // 달력에서 확정 일정을 지우면 모임이 다시 열린다. 새로 확정하는 것이니 알림도 새로 간다(모임당 한 번이 아니라 확정마다 한 번).
+    expect(await deleteEvent(db, eventId)).toBe(true);
+    const second = await handlers.confirm(post(CONFIRM), String(id));
+    expect(second.status).toBe(200);
+    await flush();
+    expect(sender).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(sender.mock.calls[0][1]).title).toBe("모임 확정");
   });
 
   it("이미 확정된 모임은 409이고 일정도 알림도 더 만들지 않는다", async () => {
