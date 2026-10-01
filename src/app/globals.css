@@ -1346,6 +1346,27 @@ body:has(.cal-page) {
   border-radius: 0;
 }
 
+/*
+ * 모바일 Excalidraw는 햄버거 메뉴 버튼을 폭 전체를 차지하는 흰 막대(.Island) 안에 넣고 그림 아래쪽에 깐다. 그 막대가 그림 내용을
+ * 가리고 터치도 막으므로, 막대는 투명하게 하고 터치를 통과시켜서 햄버거 버튼만 떠 있게 한다. 버튼 자체는 그대로 눌린다.
+ * Excalidraw의 자체 스타일을 이겨야 해서 !important를 쓴다.
+ */
+.drawing .excalidraw--mobile .App-bottom-bar .Island {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.drawing .excalidraw--mobile .App-bottom-bar .Island,
+.drawing .excalidraw--mobile .App-bottom-bar .Island * {
+  pointer-events: none !important;
+}
+
+.drawing .excalidraw--mobile .App-bottom-bar .main-menu-trigger {
+  pointer-events: auto !important;
+}
+
 .drawing-loading {
   padding: 1rem;
   color: var(--muted);

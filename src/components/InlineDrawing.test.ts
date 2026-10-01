@@ -56,6 +56,23 @@ describe("전체화면 스타일", () => {
   });
 });
 
+describe("모바일 Excalidraw 메뉴 막대", () => {
+  const css = readFileSync("src/app/globals.css", "utf8");
+
+  it("햄버거 버튼을 감싼 흰 막대는 투명하고 터치를 통과시킨다(그림 내용을 가리지 않는다)", () => {
+    const rule = /\.drawing \.excalidraw--mobile \.App-bottom-bar \.Island\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
+    expect(rule).toMatch(/background:\s*transparent\s*!important/);
+    expect(rule).toMatch(/box-shadow:\s*none\s*!important/);
+    const passThrough = /\.Island,\s*\.drawing \.excalidraw--mobile \.App-bottom-bar \.Island \*\s*\{[^}]*pointer-events:\s*none\s*!important/.exec(css);
+    expect(passThrough).not.toBeNull();
+  });
+
+  it("햄버거 버튼만은 다시 터치를 받는다", () => {
+    const rule = /\.main-menu-trigger\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
+    expect(rule).toMatch(/pointer-events:\s*auto\s*!important/);
+  });
+});
+
 describe("잠금 스타일", () => {
   it("잠긴 그림은 자식까지 포인터 이벤트를 받지 않는다 (Excalidraw 캔버스의 touch-action: none이 스크롤을 막기 때문)", () => {
     const css = readFileSync("src/app/globals.css", "utf8");
