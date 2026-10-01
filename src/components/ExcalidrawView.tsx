@@ -3,7 +3,9 @@
 import "@excalidraw/excalidraw/index.css";
 import type { ExcalidrawImperativeAPI } from "@excalidraw/excalidraw/types";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { THEMES } from "@/lib/theme";
+import { currentTheme, subscribeTheme } from "@/lib/theme-dom";
 import type { ExcalidrawScene } from "@/lib/transform/excalidraw";
 
 // Excalidraw는 브라우저 전용이라 서버에서는 그리지 않고, 필요할 때 동적으로 불러온다.
@@ -25,6 +27,12 @@ const fitToViewport = (api: ExcalidrawImperativeAPI) =>
 /** 읽기 전용 Excalidraw 뷰어. 컨테이너에 높이가 있어야 그려진다. */
 export function ExcalidrawView({ scene, height = "70vh", refitOn }: Props) {
   const [api, setApi] = useState<ExcalidrawImperativeAPI | null>(null);
+  // 사이트 테마가 어두우면(다크, Gruvbox) 그림도 Excalidraw의 어두운 모양으로 그려서 어두운 화면에서 흰 상자처럼 튀지 않게 한다.
+  const scheme = useSyncExternalStore(
+    subscribeTheme,
+    () => THEMES[currentTheme()].scheme,
+    () => "light" as const,
+  );
   const background =
     typeof scene.appState?.viewBackgroundColor === "string" ? scene.appState.viewBackgroundColor : "#ffffff";
 
@@ -48,6 +56,7 @@ export function ExcalidrawView({ scene, height = "70vh", refitOn }: Props) {
       <Excalidraw
         viewModeEnabled
         zenModeEnabled
+        theme={scheme}
         excalidrawAPI={setApi}
         initialData={{
           // 플러그인이 저장한 appState 전체를 넘기면 collaborators 등이 Map이 아니라서 깨지므로 배경색만 쓴다.

@@ -1,8 +1,14 @@
 /*
  * 화면 모양: Obsidian의 Serenity 테마(iA Writer 느낌)를 본떴다. 종이 같은 바탕, 얇은 선, 절제된 강조색 하나,
- * 그림자와 카드를 줄인 평평한 화면이다. 색은 모두 아래 변수로 두어서 다크 모드처럼 색을 통째로 바꿀 때 이 블록만 고치면 된다.
+ * 그림자와 카드를 줄인 평평한 화면이다. 색은 모두 변수로 두어서 테마를 바꿀 때 변수 블록만 바꾼다.
+ *
+ * 테마는 세 가지다: 라이트(기본, 아래 :root), 다크, Gruvbox 다크. 고른 테마는 <html data-theme="...">로 정해지고
+ * (src/lib/theme.ts, 첫 화면 전에 도는 스크립트), 다크·Gruvbox 블록은 라이트와 똑같은 색 변수를 모두 정의해야 한다
+ * (빠지면 라이트 색이 섞여 보인다. theme.test.ts가 지킨다). 글자와 바탕의 짝은 대비 4.5 이상이어야 한다(theme-contrast.test.ts).
+ * --bg는 브라우저 상단 색(theme-color)과 같아야 해서 src/lib/theme.ts의 THEMES와 맞춘다.
  */
 :root {
+  color-scheme: light;
   --bg: #fcfcfa; /* 종이 */
   --bg-soft: #f3f2ee; /* 코드, 비활성 칸, 마우스를 올렸을 때 */
   --bg-head: #ebe9e2; /* 달력의 요일 머리글 */
@@ -28,11 +34,74 @@
   --heat-4: #2f7d47;
   --heat-4-fg: #ffffff;
   --shadow: 0 6px 24px rgb(0 0 0 / 8%);
+  --scrim: rgb(0 0 0 / 35%); /* 대화 상자 뒤의 어두운 막 */
 
   /* 글꼴: iA Writer 글꼴에는 한글이 없어서 글자마다 IBM Plex Sans KR로 넘어간다. */
   --font-ui: var(--font-quattro), var(--font-plex-kr), system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-prose: var(--font-duo), var(--font-plex-kr), system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --font-code: var(--font-mono), var(--font-plex-kr), ui-monospace, "D2Coding", Consolas, "Malgun Gothic", monospace;
+}
+
+/* 다크: 라이트의 종이 느낌을 그대로 어둡게 옮긴 차분한 중성 회색 바탕과 부드러운 파랑 강조색. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1c1f;
+  --bg-soft: #232529;
+  --bg-head: #2b2d32;
+  --fg: #e4e3df;
+  --muted: #9d9b94;
+  --border: #303237;
+  --border-strong: #43464c;
+  --accent: #7aa7f0;
+  --accent-soft: #263349;
+  --on-accent: #10151f;
+  --danger: #f08a85;
+  --banner-bg: #3a3420;
+  --error-bg: #3d2523;
+  --event-bg: #263349;
+  --event-fg: #9fc0f5;
+  --meetup-bg: #1f3526;
+  --meetup-fg: #8fd1a2;
+  --ok: #6cc489;
+  --heat-1: #1f3a2a;
+  --heat-2: #2a5a3c;
+  --heat-3: #357a4f;
+  --heat-3-fg: #f4fff7;
+  --heat-4: #67c48a;
+  --heat-4-fg: #0d2216;
+  --shadow: 0 6px 24px rgb(0 0 0 / 40%);
+  --scrim: rgb(0 0 0 / 55%);
+}
+
+/* Gruvbox 다크: 원래 Gruvbox의 따뜻한 갈색 회색 바탕(bg0 #282828)과 노랑 강조색, 초록 열 지도. */
+:root[data-theme="gruvbox"] {
+  color-scheme: dark;
+  --bg: #282828;
+  --bg-soft: #32302f;
+  --bg-head: #3c3836;
+  --fg: #ebdbb2;
+  --muted: #a89984;
+  --border: #3c3836;
+  --border-strong: #504945;
+  --accent: #d79921;
+  --accent-soft: #3d3a2a;
+  --on-accent: #1d2021;
+  --danger: #fe5f4a;
+  --banner-bg: #4a4021;
+  --error-bg: #442a28;
+  --event-bg: #263235;
+  --event-fg: #83a598;
+  --meetup-bg: #343b22;
+  --meetup-fg: #b8bb26;
+  --ok: #b8bb26;
+  --heat-1: #33402a;
+  --heat-2: #4b5f2c;
+  --heat-3: #8a9a2f;
+  --heat-3-fg: #1d2021;
+  --heat-4: #b8bb26;
+  --heat-4-fg: #1d2021;
+  --shadow: 0 6px 24px rgb(0 0 0 / 45%);
+  --scrim: rgb(0 0 0 / 55%);
 }
 
 * {
@@ -167,6 +236,30 @@ h6 {
 .site-links a:hover {
   color: var(--fg);
   text-decoration: underline;
+}
+
+/* 머리글 오른쪽: 테마 고르기와 알림 종 */
+.site-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* 테마 고르기. 작게 두어서 좁은 폰 화면의 머리글에도 들어간다. */
+.theme-select {
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.theme-select:hover {
+  border-color: var(--muted);
+  color: var(--fg);
 }
 
 .notify {
@@ -469,7 +562,8 @@ body:has(.cal-page) {
 }
 
 .modal::backdrop {
-  background: rgb(0 0 0 / 35%);
+  /* ::backdrop이 변수를 물려받지 못하는 오래된 브라우저에서는 라이트와 같은 막이 된다. */
+  background: var(--scrim, rgb(0 0 0 / 35%));
 }
 
 .modal-body {

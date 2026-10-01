@@ -3,6 +3,8 @@ import { IBM_Plex_Sans_KR } from "next/font/google";
 import localFont from "next/font/local";
 import Link from "next/link";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ThemeSwitch } from "@/components/ThemeSwitch";
+import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 
 // 글꼴: Obsidian의 Serenity 테마처럼 iA Writer 글꼴 세 가지를 쓴다(SIL Open Font License 1.1, ./fonts/LICENSE-iA-Writer.md).
@@ -52,11 +54,19 @@ export const metadata: Metadata = {
   icons: { icon: "/icon-192.png", apple: "/apple-icon.png" },
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#fcfcfa" };
+// 브라우저 상단 색(theme-color)은 여기서 정하지 않는다: 고른 테마에 따라 달라서 첫 화면 전에 도는 스크립트(themeInitScript)가
+// 태그를 하나 만들어 관리한다. Next.js가 만들게 두면, 문서 화면처럼 제목을 나중에 계산하는 화면에서 라이트 값의 태그가 뒤늦게
+// 하나 더 붙어서 어두운 테마의 상단 색을 덮어쓴다.
+export const viewport: Viewport = { width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={`${quattro.variable} ${duo.variable} ${mono.variable} ${plexKr.variable}`}>
+    // data-theme는 첫 화면 전에 스크립트가 붙이므로 서버가 만든 HTML과 달라도 정상이다(suppressHydrationWarning).
+    <html lang="ko" className={`${quattro.variable} ${duo.variable} ${mono.variable} ${plexKr.variable}`} suppressHydrationWarning>
+      <head>
+        {/* 첫 화면이 그려지기 전에 저장된 테마를 적용해서 어두운 테마를 쓰는 사람에게 흰 화면이 번쩍이지 않게 한다. */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />
+      </head>
       <body>
         <header className="site-header">
           <div className="site-nav">
@@ -69,7 +79,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/meetups">모임</Link>
             </nav>
           </div>
-          <NotificationBell />
+          <div className="site-tools">
+            <ThemeSwitch />
+            <NotificationBell />
+          </div>
         </header>
         {children}
       </body>
