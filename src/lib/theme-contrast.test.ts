@@ -40,6 +40,7 @@ const PAIRS: [string, string][] = [
   ["--fg", "--error-bg"],
   ["--event-fg", "--event-bg"],
   ["--meetup-fg", "--meetup-bg"],
+  ["--range-fg", "--range-bg"],
   ["--fg", "--heat-1"],
   ["--fg", "--heat-2"],
   ["--heat-3-fg", "--heat-3"],
