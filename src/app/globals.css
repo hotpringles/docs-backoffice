@@ -142,6 +142,13 @@
   }
 }
 
+html,
+body {
+  /* 두 손가락 확대와 두 번 탭 확대를 막고 한 손가락 이동(스크롤)만 허용한다. viewport의 user-scalable=no를 무시하는 iOS도 이 값은 따른다.
+   * Excalidraw 그림 캔버스는 자기 쪽에서 touch-action: none을 쓰고 확대·이동을 직접 처리하므로 영향이 없다. */
+  touch-action: pan-x pan-y;
+}
+
 html {
   -webkit-text-size-adjust: 100%;
   /* 세로 스크롤바가 있는 긴 페이지와 없는 짧은 페이지에서 내용의 가로 위치가 달라지지 않게, 스크롤바 자리를 양쪽에 똑같이 비워 둔다. */
@@ -260,6 +267,13 @@ h6 {
 .theme-select:hover {
   border-color: var(--muted);
   color: var(--fg);
+}
+
+/* iOS는 글자가 16px보다 작은 입력칸·선택 상자를 누르면 화면을 확대해 버린다. 터치 화면에서는 16px로 키운다. */
+@media (pointer: coarse) {
+  .theme-select {
+    font-size: 16px;
+  }
 }
 
 .notify {

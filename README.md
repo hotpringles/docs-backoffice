@@ -71,6 +71,14 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 - 흰 화면이 번쩍이지 않도록 `<head>`의 짧은 스크립트(`themeInitScript`)가 첫 화면 전에 테마를 적용합니다. 브라우저 상단 색(`theme-color`)도 이 스크립트가 테마에 맞춰 하나만 만들어 관리합니다.
 - Excalidraw 그림은 어두운 테마에서 Excalidraw의 어두운 모양으로 그려집니다. 홈 화면에 추가한 앱의 시작 화면 색(`manifest`의 `background_color`)은 고정이라 라이트 색입니다.
 
+## 모바일 화면 확대 막기
+
+폰에서 두 손가락 확대와 두 번 탭 확대가 되지 않습니다(앱처럼 쓰는 화면이라서). 두 군데에서 막습니다.
+- `src/app/layout.tsx`의 viewport에 `maximum-scale=1, user-scalable=no`: Android 등에서 듣습니다. **iOS 10 이상은 접근성 때문에 이 값을 무시합니다**(MDN).
+- `src/app/globals.css`의 `html, body { touch-action: pan-x pan-y }`: 한 손가락 스크롤만 허용합니다. iOS 13 이상도 따릅니다. Excalidraw 그림 캔버스는 자기 쪽에서 확대·이동을 처리해서 그림 안의 두 손가락 확대는 그대로 됩니다.
+- iOS는 글자가 16px보다 작은 입력칸을 누르면 화면을 확대해 버리므로, 터치 화면에서는 테마 선택 상자를 16px로 둡니다(다른 입력칸은 이미 16px).
+- 글자가 작아서 키워야 하는 사람은 기기의 글자 크기 설정을 써야 합니다. 되돌리려면 위의 viewport 두 값과 `touch-action` 규칙을 지웁니다. 확인은 Chromium 모바일 에뮬레이션에서 했고(막기 전 5배까지 확대, 막은 뒤 1배, viewport 값을 빼고 `touch-action`만 둬도 1배) 실제 iPhone으로는 확인하지 못했습니다.
+
 ## 문서 작성자 라벨
 
 문서 페이지 위쪽에 **작성자 @계정** 라벨이 붙습니다. 그 문서를 `develop`에 **처음 올린 커밋의 작성자**(GitHub 계정 이름)이고, 라벨에 마우스를 올리면 커밋에 적힌 이름도 보입니다. 목록에는 붙이지 않습니다.

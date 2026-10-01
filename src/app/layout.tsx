@@ -57,7 +57,9 @@ export const metadata: Metadata = {
 // 브라우저 상단 색(theme-color)은 여기서 정하지 않는다: 고른 테마에 따라 달라서 첫 화면 전에 도는 스크립트(themeInitScript)가
 // 태그를 하나 만들어 관리한다. Next.js가 만들게 두면, 문서 화면처럼 제목을 나중에 계산하는 화면에서 라이트 값의 태그가 뒤늦게
 // 하나 더 붙어서 어두운 테마의 상단 색을 덮어쓴다.
-export const viewport: Viewport = { width: "device-width", initialScale: 1 };
+// 폰에서 화면이 확대되지 않게 한다(앱처럼 쓰는 화면이라서). 이 값은 Android 등에서 듣고, iOS 10 이상은 접근성 때문에 무시한다 —
+// iOS는 globals.css의 touch-action으로 막는다. 큰 글씨가 필요한 사람은 기기의 글자 크기 설정을 쓰면 된다.
+export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
