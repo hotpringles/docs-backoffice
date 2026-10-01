@@ -95,17 +95,17 @@ describe("기간 일정 저장", () => {
     expect((await getEvent(db, id))?.endDate).toBeNull();
   });
 
-  it("범위 조회는 그 범위와 겹치는 기간 일정을 모두 돌려준다(앞에서 시작해 들어오는 것, 범위를 덮는 것, 안에서 시작하는 것)", async () => {
-    const before = await createEvent(db, input({ title: "앞에서 시작", date: "2026-09-01", endDate: "2026-10-03" }));
-    const covering = await createEvent(db, input({ title: "범위를 덮음", date: "2026-08-01", endDate: "2026-12-01" }));
+  it("범위 조회는 시작 날짜가 범위 안에 있는 일정을 돌려준다(끝 날짜가 범위 밖이어도). 범위 앞에서 시작한 기간 일정은 달력에 시작 날짜 칸이 없으므로 가져오지 않는다", async () => {
+    await createEvent(db, input({ title: "앞에서 시작", date: "2026-09-01", endDate: "2026-10-03" }));
+    await createEvent(db, input({ title: "범위를 덮음", date: "2026-08-01", endDate: "2026-12-01" }));
     const inside = await createEvent(db, input({ title: "안에서 시작", date: "2026-10-05", endDate: "2026-10-20" }));
     const single = await createEvent(db, input({ title: "하루", date: "2026-10-07", endDate: null }));
-    await createEvent(db, input({ title: "범위 전에 끝남", date: "2026-08-01", endDate: "2026-09-30" }));
+    const lastDay = await createEvent(db, input({ title: "마지막 날에 시작", date: "2026-10-31", endDate: "2026-11-05" }));
     await createEvent(db, input({ title: "범위 뒤에 시작", date: "2026-11-01", endDate: "2026-11-10" }));
     await createEvent(db, input({ title: "범위 뒤 하루", date: "2026-11-02", endDate: null }));
 
     const ids = (await listEventsInRange(db, "2026-10-01", "2026-10-31")).map((event) => event.id);
-    expect(ids.sort((a, b) => a - b)).toEqual([before, covering, inside, single].sort((a, b) => a - b));
+    expect(ids.sort((a, b) => a - b)).toEqual([inside, single, lastDay].sort((a, b) => a - b));
   });
 
   it("끝 날짜가 시작 날짜보다 뒤가 아닌 행은 데이터베이스가 거절한다(검증을 거치지 않은 쓰기도 막힌다)", async () => {

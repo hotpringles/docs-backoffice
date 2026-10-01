@@ -502,7 +502,7 @@ body:has(.cal-page) {
   color: var(--meetup-fg);
 }
 
-/* 기간이 있는 일정은 걸친 날짜 칸마다 같은 제목이 보이고, 다른 일정과 색(보라)으로 구분한다. */
+/* 기간이 있는 일정은 시작 날짜 칸에만 보이고, 다른 일정과 색(보라)으로 구분한다. */
 .cal-event.range {
   background: var(--range-bg);
   color: var(--range-fg);

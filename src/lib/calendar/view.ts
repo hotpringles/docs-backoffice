@@ -1,4 +1,4 @@
-import { addDays, daysBetween, weekday } from "@/lib/events/dates";
+import { weekday } from "@/lib/events/dates";
 import type { EventRecord } from "@/lib/events/store";
 import type { DayCell } from "./month";
 
@@ -9,16 +9,10 @@ export function isRangeEvent(event: Pick<EventRecord, "endDate">): boolean {
   return event.endDate !== null;
 }
 
-/** 일정이 걸친 모든 날짜(시작~끝, 양 끝 포함). 하루짜리는 그 하루다. */
-export function eventDays(event: Pick<EventRecord, "date" | "endDate">): string[] {
-  const length = event.endDate === null ? 1 : daysBetween(event.date, event.endDate) + 1;
-  return Array.from({ length }, (_, index) => addDays(event.date, index));
-}
-
-/** 날짜별로 묶는다. 기간 일정은 걸친 모든 날짜에 들어간다(그 날짜의 일정 창에서 보이도록). */
+/** 시작 날짜별로 묶는다. 기간 일정도 시작 날짜 칸에만 들어간다(기간은 일정 창에서 "10/1(목) ~ 10/3(토)"로 보인다). */
 export function groupByDate(events: EventRecord[]): Record<string, EventRecord[]> {
   const grouped: Record<string, EventRecord[]> = {};
-  for (const event of events) for (const day of eventDays(event)) (grouped[day] ??= []).push(event);
+  for (const event of events) (grouped[event.date] ??= []).push(event);
   return grouped;
 }
 

@@ -109,12 +109,12 @@ export async function getEvent(db: Db, id: number): Promise<EventRecord | null> 
 }
 
 /**
- * 두 날짜 사이(양 끝 포함)와 하루라도 겹치는 일정. 기간 일정은 시작이 범위 앞이어도 범위 안으로 이어지면 들어온다.
+ * 시작 날짜가 두 날짜 사이(양 끝 포함)에 있는 일정. 기간 일정도 시작 날짜 기준이다(달력은 시작 날짜 칸에만 그린다).
  * 날짜 → 종일이 먼저 → 시작 시각 → 번호 순.
  */
 export async function listEventsInRange(db: Db, from: string, to: string): Promise<EventRecord[]> {
   const rows = await db.query<EventRow>(
-    `${SELECT_EVENT} where event_date <= $2::date and coalesce(end_date, event_date) >= $1::date order by event_date, start_time nulls first, id`,
+    `${SELECT_EVENT} where event_date between $1::date and $2::date order by event_date, start_time nulls first, id`,
     [from, to],
   );
   return rows.map(toRecord);

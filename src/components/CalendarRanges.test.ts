@@ -36,9 +36,9 @@ const render = (events: EventRecord[]) =>
 describe("달력의 기간 일정 표시", () => {
   const sprint = event(1, "스프린트 2", "2026-09-28", "2026-10-18"); // 21일
 
-  it("기간 일정은 걸친 모든 날짜 칸에 일반 일정처럼 제목이 들어가고, 색이 다르다(range)", () => {
+  it("기간 일정은 시작 날짜 칸에만 제목이 들어가고, 색이 다르다(range)", () => {
     const html = render([sprint]);
-    expect(html.match(/class="cal-event range">스프린트 2</g)).toHaveLength(21);
+    expect(html.match(/class="cal-event range">스프린트 2</g)).toHaveLength(1);
   });
 
   it("긴 줄(막대)은 그리지 않는다", () => {
@@ -51,17 +51,18 @@ describe("달력의 기간 일정 표시", () => {
     const html = render([event(2, "하루", "2026-10-08"), event(3, "모임", "2026-10-09", null, 5), event(4, "기간", "2026-10-12", "2026-10-13")]);
     expect(html).toContain('class="cal-event">하루<');
     expect(html).toContain('class="cal-event meetup">모임<');
-    expect(html.match(/class="cal-event range">기간</g)).toHaveLength(2);
+    expect(html.match(/class="cal-event range">기간</g)).toHaveLength(1);
   });
 
-  it("날짜 칸의 일정 개수에는 기간 일정도 센다. 기간이 끝난 다음 날은 0개다", () => {
+  it("날짜 칸의 일정 개수는 시작 날짜 칸에만 세고, 기간 중간이나 끝 날짜 칸은 0개다", () => {
     const html = render([sprint]);
-    expect(html).toContain('aria-label="10월 5일 (월), 일정 1개"');
-    expect(html).toContain('aria-label="10월 19일 (월), 일정 0개"');
+    expect(html).toContain('aria-label="9월 28일 (월), 일정 1개"');
+    expect(html).toContain('aria-label="10월 5일 (월), 일정 0개"');
+    expect(html).toContain('aria-label="10월 18일 (일), 일정 0개"');
   });
 
   it("한 칸에 제목은 3개까지만 보이고 나머지는 +N이다(기간 일정도 똑같이 센다)", () => {
-    const events = [sprint, event(2, "a", "2026-10-06"), event(3, "b", "2026-10-06"), event(4, "c", "2026-10-06")];
+    const events = [event(1, "스프린트", "2026-10-06", "2026-10-18"), event(2, "a", "2026-10-06"), event(3, "b", "2026-10-06"), event(4, "c", "2026-10-06")];
     const html = render(events);
     expect(html).toContain('class="cal-more">+1<');
   });

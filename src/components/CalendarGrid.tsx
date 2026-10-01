@@ -28,7 +28,7 @@ function chipClass(event: EventRecord): string {
 /**
  * 월 달력. 화면(뷰포트)에 맞춰 늘어나고, 각 날짜 칸은 버튼이라서 누르면 그 날짜 옆에 일정 창이 뜬다.
  * 이웃 달의 칸도 같은 방식으로 눌린다(그 날짜의 일정이 함께 내려와 있다).
- * 기간이 있는 일정은 걸친 날짜 칸마다 제목이 들어가고 다른 색으로 보인다.
+ * 기간이 있는 일정은 시작 날짜 칸에만 제목이 들어가고 다른 색(보라)으로 보인다.
  */
 export function CalendarGrid({ label, weeks, eventsByDate, today, openDate, onSelect }: Props) {
   return (
