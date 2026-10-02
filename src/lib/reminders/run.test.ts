@@ -41,6 +41,17 @@ const ev = (title: string, date: string, overrides: Partial<EventInput> = {}): E
 const claimedRows = async () => (await db.query<{ n: number }>("select count(*)::int as n from sent_reminders"))[0].n;
 
 describe("runReminders", () => {
+  it("일정 알림은 높은 우선순위(high)로 보낸다 — 아침 알림이 기기의 절전 때문에 몇 시간 늦게 도착하지 않도록", async () => {
+    await createEvent(db, ev("오늘 일정", "2026-10-07"));
+    await saveSubscription(db, sub(1));
+    const sender = vi.fn<Sender>(async () => undefined);
+
+    await runReminders({ db, sender }, NOW);
+
+    expect(sender).toHaveBeenCalledTimes(1);
+    expect(sender.mock.calls[0][2]).toEqual({ urgency: "high" });
+  });
+
   it("보낼 일정이 없으면 발송하지 않는다", async () => {
     await saveSubscription(db, sub(1));
     const sender = vi.fn<Sender>(async () => undefined);

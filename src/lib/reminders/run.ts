@@ -23,7 +23,8 @@ export async function runReminders({ db, sender }: PushDeps, now: Date): Promise
 
   let summary: SendSummary;
   try {
-    summary = await sendToAll(db, sender, reminderPayload(items));
+    // 일정 알림은 아침 한 번 오는 시간이 중요한 알림이라 높은 우선순위로 보낸다. 보통 우선순위는 안드로이드가 절전 중일 때 몇 시간 미룰 수 있다.
+    summary = await sendToAll(db, sender, reminderPayload(items), { urgency: "high" });
   } catch (error) {
     await releaseReminders(db, items).catch(() => undefined);
     throw error;

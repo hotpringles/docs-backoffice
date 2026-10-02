@@ -4,8 +4,15 @@ import { isAllowedPushEndpoint } from "./endpoint";
 import type { PushPayload } from "./payload";
 import { listSubscriptions, removeSubscription, type PushSubscriptionInput } from "./subscriptions";
 
+/**
+ * 알림의 중요도(Web Push의 Urgency 머리글). 푸시 서비스가 기기의 배터리를 아끼려고 알림 전달을 미룰지 정하는 데 쓴다.
+ * 안드로이드(FCM)는 `normal`을 기기가 절전(Doze) 중일 때 미룰 수 있고, `high`는 바로 깨워서 전달한다. 기본은 `normal`.
+ */
+export type PushUrgency = "very-low" | "low" | "normal" | "high";
+export type SendOptions = { urgency?: PushUrgency };
+
 /** 구독 하나에게 알림을 보낸다. 실패하면 `statusCode`가 든 오류를 던진다(web-push의 `WebPushError`와 같은 모양). */
-export type Sender = (subscription: PushSubscriptionInput, payload: string) => Promise<void>;
+export type Sender = (subscription: PushSubscriptionInput, payload: string, options?: SendOptions) => Promise<void>;
 
 export type SendSummary = { total: number; sent: number; removed: number; failed: number };
 
@@ -29,7 +36,7 @@ const CONCURRENCY = 10;
  * 모든 구독자에게 보낸다. 일부가 실패해도 나머지는 계속 보내고 예외를 던지지 않는다.
  * 사라진 구독(404, 410)은 저장소에서 지운다.
  */
-export async function sendToAll(db: Db, sender: Sender, payload: PushPayload): Promise<SendSummary> {
+export async function sendToAll(db: Db, sender: Sender, payload: PushPayload, options?: SendOptions): Promise<SendSummary> {
   const subscriptions = await listSubscriptions(db);
   const body = JSON.stringify(payload);
   const summary: SendSummary = { total: subscriptions.length, sent: 0, removed: 0, failed: 0 };
@@ -39,7 +46,7 @@ export async function sendToAll(db: Db, sender: Sender, payload: PushPayload): P
     await Promise.all(
       chunk.map(async (subscription) => {
         try {
-          await sender(subscription, body);
+          await sender(subscription, body, options);
           summary.sent += 1;
         } catch (error) {
           const status = (error as { statusCode?: number }).statusCode;
@@ -61,7 +68,7 @@ export type VapidConfig = { subject: string; publicKey: string; privateKey: stri
 
 /** `web-push`로 실제 발송하는 Sender. VAPID 정보는 호출마다 넘겨서 전역 상태를 쓰지 않는다. */
 export function createWebPushSender(vapid: VapidConfig): Sender {
-  return async (subscription, payload) => {
+  return async (subscription, payload, options) => {
     // 저장할 때 이미 검사하지만, 서버가 요청을 보내는 바로 이 자리에서 한 번 더 확인한다(SSRF의 마지막 방어선).
     if (!isAllowedPushEndpoint(subscription.endpoint)) throw new Error("허용되지 않는 푸시 주소예요.");
     await webpush.sendNotification(
@@ -69,7 +76,7 @@ export function createWebPushSender(vapid: VapidConfig): Sender {
       payload,
       {
         TTL: 60 * 60 * 24, // 하루 안에 전달되지 않으면 버린다(오래된 문서 알림은 의미가 없다).
-        urgency: "normal",
+        urgency: options?.urgency ?? "normal",
         timeout: 10_000,
         vapidDetails: { subject: vapid.subject, publicKey: vapid.publicKey, privateKey: vapid.privateKey },
       },

@@ -97,6 +97,7 @@ scripts/simulate-webhook.sh http://localhost:3112 <비밀키>
 - 일정에는 제목, 날짜, 시각(종일 또는 시작~종료), 메모, 참석자, 알림 시점(당일·1일 전·3일 전)이 있습니다.
 - (`EDIT_CODE`를 설정한 경우) 편집 코드를 5번 틀리면 그 IP는 10분 동안 막힙니다.
 - **일정 알림:** 매일 한 번(한국시간 오전 9시~9시 59분 사이) 오늘 알릴 일정을 구독한 기기 전체에 한 통으로 보냅니다. Vercel Hobby의 cron은 하루 한 번만 되고, 실행 시각이 그 시(時) 안에서 흔들립니다. 보낼 항목을 먼저 기록하므로 같은 날 두 번 실행돼도 알림은 한 번이고, 아무에게도 못 보냈으면 기록을 풀어서 다시 호출하면 재시도됩니다. Vercel은 cron 전달이 드물게 누락되거나 중복될 수 있다고 안내하고, 실패해도 다시 시도하지 않습니다.
+- **도착 시각이 기기마다 다를 수 있습니다:** 서버는 모든 기기에 같은 시각에 보내지만, iPhone(Apple 푸시)은 바로 도착하는 반면 Android(FCM)는 기기가 절전(Doze)·앱 대기 상태면 **보통 우선순위 알림을 몇 시간 미룹니다**(Android 문서: Doze 중에는 유지보수 시간이나 사용자가 기기를 깨울 때 전달). 그래서 일정 알림은 **높은 우선순위(`urgency: high`)로 보냅니다**(문서 업데이트·모임 알림은 보통). 그래도 늦으면 폰 설정에서 Chrome(또는 Samsung Internet)의 배터리를 '제한 없음'으로, 절전·휴면 앱 목록에서 빼 두세요.
 - 알림을 수동으로 보내 보려면(서버를 띄운 뒤나 배포 후): `curl -H "Authorization: Bearer <CRON_SECRET>" https://<주소>/api/cron/reminders`
 - 필요한 값 만들기: `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`를 세 번 실행해서 `EDIT_CODE`(팀에게 알릴 것), `SESSION_SECRET`, `CRON_SECRET`에 각각 넣습니다. 편집 코드는 저장소나 공개 채팅에 올리지 마세요.
 - **Neon 없이 미리 보기:** `.env.local`에 `LOCAL_MEMORY_DB=1`, `EDIT_CODE=...`, `SESSION_SECRET=...`을 넣고 `npm run dev`를 실행하면 메모리 데이터베이스로 달력을 써 볼 수 있습니다(서버를 다시 켜면 일정이 사라집니다). 일정 알림까지 시험하려면 `DATABASE_URL=local-memory`와 VAPID 값, `CRON_SECRET`도 넣습니다.

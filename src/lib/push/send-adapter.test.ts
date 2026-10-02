@@ -28,6 +28,11 @@ describe("createWebPushSender", () => {
     );
   });
 
+  it("우선순위(urgency)를 넘기면 그 값으로 보낸다. 시간이 중요한 알림을 high로 보내면 안드로이드가 절전(Doze) 중에도 바로 깨워서 전달한다", async () => {
+    await createWebPushSender(vapid)(subscription, "{}", { urgency: "high" });
+    expect(sendNotification.mock.calls[0][2]).toMatchObject({ urgency: "high", TTL: 86_400 });
+  });
+
   it("허용된 푸시 서비스가 아닌 주소로는 web-push를 부르지 않는다(저장소에 잘못 들어온 값에 대한 마지막 방어선)", async () => {
     for (const endpoint of ["https://evil.example/x", "https://10.0.0.1`.web.push.apple.com/x", "http://fcm.googleapis.com/x"]) {
       await expect(createWebPushSender(vapid)({ ...subscription, endpoint }, "{}")).rejects.toThrow("허용되지 않는 푸시 주소");
