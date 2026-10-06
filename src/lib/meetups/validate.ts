@@ -1,4 +1,3 @@
-import { shortDayLabel } from "@/lib/calendar/view";
 import { isValidEndTime, isValidTime, normalizeEndTime } from "@/lib/events/dates";
 import { MAX_TITLE_LENGTH, parseRemindOffsets } from "@/lib/events/validate";
 import type { Person } from "@/lib/people";
@@ -8,7 +7,6 @@ import {
   SLOT_MINUTES,
   boundaryOf,
   datesInRange,
-  meetupDateWindow,
   minutesOf,
   parseCellKey,
   slotCount,
@@ -47,11 +45,9 @@ function blankToNull(value: unknown): string | null | undefined {
 
 /**
  * 모임 입력(만들기와 수정)을 검사한다. 하루 범위를 비우면 09:00~22:00이다.
- * 후보 날짜는 `today`(서울 기준 오늘)를 포함한 일주일 안에서만 고를 수 있다.
- * 수정할 때는 `keepDates`(그 모임에 이미 들어 있던 날짜)를 넘긴다. 이미 지난 날짜라도 그대로 둔 것은 받아 주고,
- * 새로 더하는 날짜만 위 범위를 지켜야 한다. (지난 날이 낀 모임의 제목만 고치려는데 거절되면 곤란하기 때문이다.)
+ * 후보 날짜는 오늘과 상관없이 자유롭게 고를 수 있다(지난 날짜도 된다). 시작일부터 끝일까지 최대 14일이고 올바른 날짜여야 한다.
  */
-export function validateMeetupInput(raw: unknown, today: string, keepDates: string[] = []): Result<MeetupInput> {
+export function validateMeetupInput(raw: unknown): Result<MeetupInput> {
   if (!isRecord(raw)) return { ok: false, errors: notObject };
   const errors: MeetupFieldErrors = {};
 
@@ -62,11 +58,7 @@ export function validateMeetupInput(raw: unknown, today: string, keepDates: stri
   const startDate = typeof raw.startDate === "string" ? raw.startDate : "";
   const endDate = typeof raw.endDate === "string" ? raw.endDate : "";
   const dates = datesInRange(startDate, endDate);
-  const window = meetupDateWindow(today);
-  if (!dates) errors.dates = "후보 날짜는 시작일부터 끝일까지예요. 날짜를 YYYY-MM-DD로 입력하고, 끝일이 시작일보다 빠르면 안 돼요.";
-  else if (dates.some((date) => (date < window.min || date > window.max) && !keepDates.includes(date))) {
-    errors.dates = `후보 날짜는 오늘(${shortDayLabel(window.min)})을 포함해 일주일(${shortDayLabel(window.max)})까지만 고를 수 있어요.`;
-  }
+  if (!dates) errors.dates = "후보 날짜는 시작일부터 끝일까지(최대 14일)예요. 날짜를 YYYY-MM-DD로 입력하고, 끝일이 시작일보다 빠르면 안 돼요.";
 
   const start = blankToNull(raw.dayStart);
   const end = blankToNull(raw.dayEnd);

@@ -6,7 +6,6 @@ import {
   cellKey,
   datesInRange,
   defaultMeetupDates,
-  meetupDateWindow,
   minutesOf,
   parseCellKey,
   slotCount,
@@ -91,27 +90,14 @@ describe("cellKey / parseCellKey", () => {
   });
 });
 
-describe("meetupDateWindow", () => {
-  it("후보 날짜를 고를 수 있는 범위는 오늘을 포함해 7일(오늘~6일 뒤)이다", () => {
-    expect(meetupDateWindow("2026-10-07")).toEqual({ min: "2026-10-07", max: "2026-10-13" });
-  });
-
-  it("달과 해를 넘겨도 맞다", () => {
-    expect(meetupDateWindow("2026-12-28")).toEqual({ min: "2026-12-28", max: "2027-01-03" });
-    expect(meetupDateWindow("2026-02-25")).toEqual({ min: "2026-02-25", max: "2026-03-03" });
-  });
-});
-
 describe("defaultMeetupDates", () => {
-  it("새 모임 폼의 처음 값: 시작은 오늘, 끝은 고를 수 있는 마지막 날(오늘을 포함한 일주일의 끝)이다", () => {
+  it("새 모임 폼의 처음 값: 시작은 오늘, 끝은 오늘을 포함한 일주일의 끝이다(처음에 채워 주는 값일 뿐 선택을 제한하지 않는다)", () => {
     expect(defaultMeetupDates("2026-09-30")).toEqual({ startDate: "2026-09-30", endDate: "2026-10-06" });
     expect(defaultMeetupDates("2026-12-28")).toEqual({ startDate: "2026-12-28", endDate: "2027-01-03" });
   });
 
-  it("처음 값은 서버가 받아 주는 범위 안이다(그대로 만들어도 거절되지 않는다)", () => {
+  it("처음 값은 올바른 후보 날짜 7일이다(그대로 만들어도 거절되지 않는다)", () => {
     const { startDate, endDate } = defaultMeetupDates("2026-10-07");
-    const { min, max } = meetupDateWindow("2026-10-07");
-    expect(startDate >= min && endDate <= max).toBe(true);
     expect(datesInRange(startDate, endDate)).toHaveLength(7);
   });
 });

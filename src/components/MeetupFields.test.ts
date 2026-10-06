@@ -9,11 +9,24 @@ const render = (dayEnd: string) =>
     createElement(MeetupFields, {
       value: { title: "모임", startDate: "2026-10-07", endDate: "2026-10-08", dayStart: "09:00", dayEnd },
       onChange: () => undefined,
-      minDate: "2026-10-07",
-      maxDate: "2026-10-13",
       fieldErrors: {},
     }),
   );
+
+describe("MeetupFields 후보 날짜", () => {
+  it("시작 날짜 입력칸은 날짜 범위 제한(min, max)이 없어서 오늘과 상관없이 아무 날이나 고를 수 있다", () => {
+    const [start] = render("22:00").match(/<input[^>]*type="date"[^>]*>/g) ?? [];
+    expect(start).toContain('value="2026-10-07"');
+    expect(start).not.toMatch(/\b(min|max)=/);
+  });
+
+  it("끝 날짜 입력칸은 시작 날짜보다 앞은 못 고르게(min)만 하고 위쪽 제한(max)은 없다", () => {
+    const [, end] = render("22:00").match(/<input[^>]*type="date"[^>]*>/g) ?? [];
+    expect(end).toContain('value="2026-10-08"');
+    expect(end).toContain('min="2026-10-07"');
+    expect(end).not.toMatch(/\bmax=/);
+  });
+});
 
 describe("MeetupFields 하루 끝", () => {
   it("저장된 자정(24:00)은 시각 입력칸에 00:00으로 보여 준다(입력칸은 24:00을 못 보여 준다)", () => {

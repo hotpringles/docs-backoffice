@@ -106,17 +106,19 @@ describe("create", () => {
     expect(scheduled).toEqual([]);
   });
 
-  it("후보 날짜는 서버 시계 기준 오늘을 포함한 일주일(10/7~10/13)만 받는다(어제, 일주일 다음 날은 400)", async () => {
+  it("후보 날짜는 오늘과 상관없이 자유롭게 고를 수 있다(지난 날짜, 일주일 뒤 모두 201). 15일 넘는 기간이나 틀린 날짜는 400", async () => {
     const handlers = createMeetupHandlers(deps());
     // 오늘(NOW)은 서울 시간으로 10/7이다.
-    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-06", endDate: "2026-10-07" }))).status).toBe(400);
-    const late = await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-13", endDate: "2026-10-14" }));
-    expect(late.status).toBe(400);
-    expect((await late.json()).errors.dates).toContain("일주일");
-    expect(await listMeetups(db)).toEqual([]);
-    expect(scheduled).toEqual([]);
+    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-06", endDate: "2026-10-07" }))).status).toBe(201); // 어제부터
+    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-20", endDate: "2026-10-21" }))).status).toBe(201); // 일주일 뒤
+    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-12-01", endDate: "2026-12-01" }))).status).toBe(201); // 한참 뒤
+    expect(await listMeetups(db)).toHaveLength(3);
 
-    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-13", endDate: "2026-10-13" }))).status).toBe(201);
+    const tooLong = await handlers.create(post({ ...NEW_MEETUP, startDate: "2026-10-07", endDate: "2026-10-21" }));
+    expect(tooLong.status).toBe(400);
+    expect((await tooLong.json()).errors.dates).toContain("14일");
+    expect((await handlers.create(post({ ...NEW_MEETUP, startDate: "abc", endDate: "abc" }))).status).toBe(400);
+    expect(await listMeetups(db)).toHaveLength(3);
   });
 
   it("알림 설정이 없거나 발송이 전부 실패해도 만들기는 성공한다", async () => {
@@ -376,13 +378,14 @@ describe("update", () => {
     expect(await listAvailability(db, id)).toEqual({ p2: [cellKey(D2, 0), cellKey(D2, 5)] });
   });
 
-  it("이미 지난 날짜가 들어 있는 모임도 그 날짜를 그대로 두면 수정된다. 새로 더하는 날짜는 오늘을 포함한 일주일 안이어야 한다", async () => {
+  it("수정할 때도 날짜를 자유롭게 바꿀 수 있다(지난 날짜 포함, 일주일 뒤까지). 15일 넘는 기간은 400", async () => {
     const id = await createMeetup(db, { title: "지난 날 포함", dates: ["2026-10-05", "2026-10-06", D1], dayStart: "09:00", dayEnd: "13:00" });
     const handlers = createMeetupHandlers(deps());
     expect((await handlers.update(post({ ...EDIT, title: "제목만", startDate: "2026-10-05", endDate: D1 }), String(id))).status).toBe(200);
-    expect((await handlers.update(post({ ...EDIT, startDate: "2026-10-04", endDate: D1 }), String(id))).status).toBe(400); // 10/4는 새로 더하는 지난 날
-    expect((await handlers.update(post({ ...EDIT, startDate: "2026-10-05", endDate: "2026-10-14" }), String(id))).status).toBe(400); // 일주일(10/13)을 넘김
-    expect((await getMeetup(db, id))?.title).toBe("제목만");
+    expect((await handlers.update(post({ ...EDIT, startDate: "2026-10-04", endDate: D1 }), String(id))).status).toBe(200); // 더 이른 날짜를 더함
+    expect((await handlers.update(post({ ...EDIT, startDate: "2026-10-04", endDate: "2026-10-17" }), String(id))).status).toBe(200); // 14일, 일주일 밖까지
+    expect((await handlers.update(post({ ...EDIT, startDate: "2026-10-04", endDate: "2026-10-18" }), String(id))).status).toBe(400); // 15일
+    expect((await getMeetup(db, id))?.dates).toHaveLength(14);
   });
 
   it("입력이 틀리면 400과 필드별 메시지를 주고 바꾸지 않는다", async () => {

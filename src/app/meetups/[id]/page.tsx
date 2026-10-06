@@ -7,7 +7,6 @@ import { MeetupHeaderActions } from "@/components/MeetupHeaderActions";
 import { MeetupTabs } from "@/components/MeetupTabs";
 import { hasEditSession } from "@/lib/auth/server";
 import { getDbOrNull } from "@/lib/db";
-import { todayInSeoul } from "@/lib/events/dates";
 import { getEvent, type EventRecord } from "@/lib/events/store";
 import { computeOverlap } from "@/lib/meetups/overlap";
 import { slotCount } from "@/lib/meetups/slots";
@@ -88,7 +87,7 @@ export default async function MeetupPage({ params, searchParams }: Props) {
       </p>
       <div className="meetup-head">
         <h1>{meetup.title}</h1>
-        {meetup.status === "open" && <MeetupHeaderActions meetup={meetup} canEdit={canEdit} today={todayInSeoul()} />}
+        {meetup.status === "open" && <MeetupHeaderActions meetup={meetup} canEdit={canEdit} />}
       </div>
       <p className="meta">
         {meetupRangeLabel(meetup.dates)} · 하루 {meetup.dayStart}–{meetup.dayEnd} · {meetup.status === "confirmed" ? "확정됨" : "열린 모임"} ·{" "}

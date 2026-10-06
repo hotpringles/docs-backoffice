@@ -1,4 +1,3 @@
-import { todayInSeoul } from "@/lib/events/dates";
 import { guardedWrite, type GuardContext, type GuardDeps } from "@/lib/guard";
 import { json } from "@/lib/http";
 import type { PushDepsResult } from "@/lib/push/send";
@@ -29,7 +28,7 @@ export function createMeetupHandlers(deps: MeetupDeps) {
     /** 모임 만들기(편집 권한). 저장한 뒤 "모임 열림" 알림을 응답 뒤에 보낸다. */
     create(request: Request): Promise<Response> {
       return guarded(request, async ({ db, body }) => {
-        const result = validateMeetupInput(body, todayInSeoul(deps.now()));
+        const result = validateMeetupInput(body);
         if (!result.ok) return invalid(result.errors);
         const id = await createMeetup(db, result.value);
         deps.runAfter(() => notifyIfConfigured(deps.loadPushDeps, "meetup-opened", id, meetupOpenedPayload({ id, title: result.value.title })));
@@ -49,7 +48,7 @@ export function createMeetupHandlers(deps: MeetupDeps) {
         if (!meetup) return notFound();
         if (meetup.status === "confirmed") return alreadyConfirmed();
 
-        const result = validateMeetupInput(body, todayInSeoul(deps.now()), meetup.dates);
+        const result = validateMeetupInput(body);
         if (!result.ok) return invalid(result.errors);
 
         const changed = await updateMeetup(db, id, result.value, { clearAvailability: result.value.dayStart !== meetup.dayStart });

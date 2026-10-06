@@ -5,15 +5,14 @@ import { slotCount, slotTime } from "./slots";
 import { createMeetup, getMeetup } from "./store";
 import { validateConfirmInput, validateMeetupInput } from "./validate";
 
-const TODAY = "2026-10-07";
 const base = { title: "야간 모임", startDate: "2026-10-07", endDate: "2026-10-08" };
 const ok = (raw: Record<string, unknown>) => {
-  const result = validateMeetupInput({ ...base, ...raw }, TODAY);
+  const result = validateMeetupInput({ ...base, ...raw });
   if (!result.ok) throw new Error(JSON.stringify(result.errors));
   return result.value;
 };
 const errorsOf = (raw: Record<string, unknown>) => {
-  const result = validateMeetupInput({ ...base, ...raw }, TODAY);
+  const result = validateMeetupInput({ ...base, ...raw });
   return result.ok ? null : result.errors;
 };
 
