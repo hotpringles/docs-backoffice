@@ -45,7 +45,7 @@ describe("모임 API 호출", () => {
     const { impl, requests } = fakeFetch(() => ok({ ok: true, count: 2 }));
     expect(await saveAvailability(impl, 4, "p2", ["2026-10-07:0", "2026-10-07:1"])).toEqual({ ok: true, data: { ok: true, count: 2 } });
     expect(requests[0].url).toBe("/api/meetups/4/availability");
-    expect(JSON.parse(String(requests[0].init?.body))).toEqual({ personId: "p2", cells: ["2026-10-07:0", "2026-10-07:1"] });
+    expect(JSON.parse(String(requests[0].init?.body))).toEqual({ personId: "p2", mode: "available", cells: ["2026-10-07:0", "2026-10-07:1"] });
   });
 
   it("401(편집 코드), 409(이미 확정)는 상태 코드로 구분할 수 있다", async () => {

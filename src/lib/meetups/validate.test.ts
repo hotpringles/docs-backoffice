@@ -102,14 +102,14 @@ describe("validateAvailabilityInput", () => {
     const result = validateAvailabilityInput({ personId: "p2", cells: ["2026-10-07:0", "2026-10-08:7", "2026-10-07:0"] }, meetup, people);
     expect(result).toEqual({
       ok: true,
-      value: { personId: "p2", cells: [{ day: "2026-10-07", slot: 0 }, { day: "2026-10-08", slot: 7 }] },
+      value: { personId: "p2", mode: "available", cells: [{ day: "2026-10-07", slot: 0 }, { day: "2026-10-08", slot: 7 }] },
     });
   });
 
   it("빈 목록도 통과한다(그 사람의 칸을 모두 지운다)", () => {
     expect(validateAvailabilityInput({ personId: "p1", cells: [] }, meetup, people)).toEqual({
       ok: true,
-      value: { personId: "p1", cells: [] },
+      value: { personId: "p1", mode: "available", cells: [] },
     });
   });
 

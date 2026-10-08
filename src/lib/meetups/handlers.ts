@@ -3,8 +3,20 @@ import { json } from "@/lib/http";
 import type { PushDepsResult } from "@/lib/push/send";
 import { meetupConfirmedPayload, meetupOpenedPayload } from "./notices";
 import { notifyIfConfigured } from "./notify";
+import { slotCount } from "./slots";
 import { confirmMeetup, createMeetup, deleteMeetup, getMeetup, saveAvailability, updateMeetup } from "./store";
-import { validateAvailabilityInput, validateConfirmInput, validateMeetupInput } from "./validate";
+import { validateAvailabilityInput, validateConfirmInput, validateMeetupInput, type Cell, type MeetupShape } from "./validate";
+
+/** 모임의 모든 칸 중 `excluded`에 없는 칸(불가능한 칸을 뺀 나머지 = 가능한 칸). */
+function complementCells(meetup: MeetupShape, excluded: Cell[]): Cell[] {
+  const perDay = slotCount(meetup.dayStart, meetup.dayEnd, meetup.slotMinutes);
+  const skip = new Set(excluded.map((cell) => `${cell.day}:${cell.slot}`));
+  const cells: Cell[] = [];
+  for (const day of meetup.dates) {
+    for (let slot = 0; slot < perDay; slot += 1) if (!skip.has(`${day}:${slot}`)) cells.push({ day, slot });
+  }
+  return cells;
+}
 
 export type MeetupDeps = GuardDeps & {
   /** 응답을 돌려준 뒤에 실행할 작업을 예약한다(실제로는 `next/server`의 `after`). 알림에 쓴다. */
@@ -103,9 +115,12 @@ export function createMeetupHandlers(deps: MeetupDeps) {
           const result = validateAvailabilityInput(body, meetup, people);
           if (!result.ok) return invalid(result.errors);
 
-          const saved = await saveAvailability(db, id, result.value.personId, result.value.cells);
+          // 불가능한 칸을 골랐다면 나머지 모든 칸이 가능한 칸이다. 저장은 언제나 가능한 칸으로 해서 겹침 계산이 방식과 상관없게 한다.
+          const { personId, mode } = result.value;
+          const cells = mode === "unavailable" ? complementCells(meetup, result.value.cells) : result.value.cells;
+          const saved = await saveAvailability(db, id, personId, cells, mode);
           if (!saved) return unavailable();
-          return json({ ok: true, count: result.value.cells.length });
+          return json({ ok: true, count: cells.length });
         },
         { requireSession: false, failureLog: "가능한 시간을 저장하다 데이터베이스 오류가 났어요" },
       );

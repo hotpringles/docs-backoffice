@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore, type MouseEvent, type PointerEvent } from "react";
 import { shortDayLabel } from "@/lib/calendar/view";
 import { saveAvailability } from "@/lib/meetups/client";
+import type { AvailabilityMode } from "@/lib/meetups/validate";
 import { DayHead } from "./DayHead";
 import { cellKey } from "@/lib/meetups/slots";
 import { createTouchPainter } from "@/lib/meetups/touchPaint";
-import { paintKeys, sameKeys, slotLabels, sortedKeys, toggleColumn } from "@/lib/meetups/view";
+import { columnKeys, paintKeys, sameKeys, slotLabels, sortedKeys, toggleColumn } from "@/lib/meetups/view";
 import type { Person } from "@/lib/people";
 
 type Props = {
@@ -19,6 +20,10 @@ type Props = {
   people: Person[];
   /** 사람 번호 → 가능한 칸 키 목록(서버에 저장된 값) */
   availability: Record<string, string[]>;
+  /** 사람 번호 → 그 사람이 고른 방식(없으면 가능한 시간 고르기) */
+  modes: Record<string, AvailabilityMode>;
+  /** 처음부터 골라 둘 이름(없으면 이 기기에서 마지막에 고른 이름). 시험에서 쓴다. */
+  initialPersonId?: string;
   /** 확정된 모임은 읽기 전용이다. */
   readOnly: boolean;
 };
@@ -51,12 +56,15 @@ const noRememberedPerson = () => null;
  * 내 시간 표시. 열은 날짜, 행은 30분 칸이다. 마우스는 누른 채 끌어서 칠하고, 터치·키보드는 칸을 눌러 켜고 끈다
  * (터치는 끌면 스크롤이어야 하므로 탭만 쓴다). 저장하면 이 사람의 칸이 통째로 바뀐다.
  */
-export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotMinutes, people, availability, readOnly }: Props) {
+export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotMinutes, people, availability, modes, initialPersonId, readOnly }: Props) {
   const router = useRouter();
   const remembered = useSyncExternalStore(subscribeNothing, readRememberedPerson, noRememberedPerson);
   const [chosen, setChosen] = useState<string | null>(null);
   const [saved, setSaved] = useState(availability);
+  const [savedModes, setSavedModes] = useState(modes);
+  // edits는 그 사람이 지금 칠해 둔 칸이다. 가능한 시간 방식이면 가능한 칸, 불가능한 시간 방식이면 불가능한(빨간) 칸이다.
   const [edits, setEdits] = useState<Record<string, string[]>>({});
+  const [modeEdits, setModeEdits] = useState<Record<string, AvailabilityMode>>({});
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const drag = useRef<{ on: boolean } | null>(null);
@@ -72,7 +80,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
   const ignoreClickUntil = useRef(0);
 
   // 이 기기에서 마지막으로 고른 이름이 명단에 아직 있으면 처음부터 골라 둔다. 사용자가 고르면 그 선택이 우선이다.
-  const personId = chosen ?? (remembered !== null && people.some((person) => person.id === remembered) ? remembered : null);
+  const personId = chosen ?? initialPersonId ?? (remembered !== null && people.some((person) => person.id === remembered) ? remembered : null);
 
   // 마우스 버튼을 표 밖에서 놓아도 칠하기가 끝나야 한다.
   useEffect(() => {
@@ -88,9 +96,25 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
   }, []);
 
   const editable = !readOnly && personId !== null;
-  const current = personId ? (edits[personId] ?? saved[personId] ?? []) : [];
+  const allKeys = dates.flatMap((day) => columnKeys(day, slotCount));
+  /** 저장된 값을 그 사람의 방식에 맞는 '칠한 칸'으로 바꾼다(불가능한 방식이면 가능하지 않은 모든 칸). */
+  const savedMarks = (id: string): string[] => {
+    const available = saved[id] ?? [];
+    if (savedModes[id] !== "unavailable") return available;
+    const set = new Set(available);
+    return allKeys.filter((key) => !set.has(key));
+  };
+  const marksOf = (id: string): string[] => edits[id] ?? savedMarks(id);
+  const mode: AvailabilityMode = personId ? (modeEdits[personId] ?? savedModes[personId] ?? "available") : "available";
+  const availableOf = (marks: string[], at: AvailabilityMode): string[] => {
+    if (at === "available") return marks;
+    const set = new Set(marks);
+    return allKeys.filter((key) => !set.has(key));
+  };
+  const current = personId ? marksOf(personId) : [];
   const currentSet = new Set(current);
-  const dirty = personId !== null && !sameKeys(current, saved[personId] ?? []);
+  const dirty =
+    personId !== null && (mode !== (savedModes[personId] ?? "available") || !sameKeys(availableOf(current, mode), saved[personId] ?? []));
   const labels = slotLabels(dayStart, slotCount, slotMinutes);
 
   function choose(id: string) {
@@ -102,7 +126,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
   /** 이전 값을 기준으로 바꿔서, 끌면서 빠르게 지나가도 앞에서 칠한 칸이 사라지지 않게 한다. */
   function paint(keys: string[], on: boolean) {
     if (!personId) return;
-    setEdits((previous) => ({ ...previous, [personId]: paintKeys(previous[personId] ?? saved[personId] ?? [], keys, on) }));
+    setEdits((previous) => ({ ...previous, [personId]: paintKeys(previous[personId] ?? savedMarks(personId), keys, on) }));
     setMessage(null);
   }
 
@@ -163,7 +187,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
 
   function toggleDay(day: string) {
     if (!personId) return;
-    setEdits((previous) => ({ ...previous, [personId]: toggleColumn(previous[personId] ?? saved[personId] ?? [], day, slotCount) }));
+    setEdits((previous) => ({ ...previous, [personId]: toggleColumn(previous[personId] ?? savedMarks(personId), day, slotCount) }));
     setMessage(null);
   }
 
@@ -186,15 +210,25 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
     if (event.detail === 0 || lastPointer.current !== "mouse") paint([key], !currentSet.has(key));
   }
 
+  /** 방식을 바꾼다. 이미 칠한 칸이 있으면 뒤집어서, 가능한 시간이 그대로 유지되게 한다(없으면 빈 채로 둔다). */
+  function switchMode(next: AvailabilityMode) {
+    if (!personId || next === mode) return;
+    const marks = marksOf(personId);
+    setEdits((previous) => ({ ...previous, [personId]: marks.length > 0 ? availableOf(marks, "unavailable") : marks }));
+    setModeEdits((previous) => ({ ...previous, [personId]: next }));
+    setMessage(null);
+  }
+
   async function save() {
     if (!personId) return;
     setBusy(true);
     setMessage(null);
     const keys = sortedKeys(current);
-    const result = await saveAvailability(browserFetch, meetupId, personId, keys);
+    const result = await saveAvailability(browserFetch, meetupId, personId, keys, mode);
     setBusy(false);
     if (result.ok) {
-      setSaved((previous) => ({ ...previous, [personId]: keys }));
+      setSaved((previous) => ({ ...previous, [personId]: sortedKeys(availableOf(keys, mode)) }));
+      setSavedModes((previous) => ({ ...previous, [personId]: mode }));
       setMessage({ kind: "ok", text: "저장했어요." });
       router.refresh();
       return;
@@ -225,9 +259,22 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
       ) : personId === null ? (
         <p className="meta">먼저 위에서 내 이름을 골라 주세요.</p>
       ) : (
-        <p className="meta">
-          칸을 눌러 가능한 시간을 표시하세요. 마우스는 끌어서, 폰은 칸을 꾹 누른 채 끌어서 칠할 수 있어요(그냥 끌면 스크롤). 날짜를 누르면 그 날 전체를 켜고 꺼요.
-        </p>
+        <>
+          <div className="mode-switch" role="radiogroup" aria-label="시간 고르는 방식">
+            <button type="button" role="radio" aria-checked={mode === "available"} className={mode === "available" ? "chip selected" : "chip"} onClick={() => switchMode("available")}>
+              가능한 시간 고르기
+            </button>
+            <button type="button" role="radio" aria-checked={mode === "unavailable"} className={mode === "unavailable" ? "chip selected off" : "chip off"} onClick={() => switchMode("unavailable")}>
+              불가능한 시간 고르기
+            </button>
+          </div>
+          <p className="meta">
+            {mode === "available"
+              ? "칸을 눌러 가능한 시간을 표시하세요."
+              : "칸을 눌러 불가능한 시간을 빨간색으로 표시하세요. 표시하지 않은 시간은 모두 가능한 시간으로 쳐요."}{" "}
+            마우스는 끌어서, 폰은 칸을 꾹 누른 채 끌어서 칠할 수 있어요(그냥 끌면 스크롤). 날짜를 누르면 그 날 전체를 켜고 꺼요.
+          </p>
+        </>
       )}
 
       <div className="slot-scroll" ref={gridRef}>
@@ -258,7 +305,7 @@ export function AvailabilityEditor({ meetupId, dates, dayStart, slotCount, slotM
                     <td key={key}>
                       <button
                         type="button"
-                        className={on ? "slot on" : "slot"}
+                        className={on ? (mode === "unavailable" ? "slot off" : "slot on") : "slot"}
                         aria-pressed={on}
                         aria-label={`${shortDayLabel(day)} ${label}`}
                         data-key={key}

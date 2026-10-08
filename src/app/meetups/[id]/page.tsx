@@ -10,7 +10,7 @@ import { getDbOrNull } from "@/lib/db";
 import { getEvent, type EventRecord } from "@/lib/events/store";
 import { computeOverlap } from "@/lib/meetups/overlap";
 import { slotCount } from "@/lib/meetups/slots";
-import { getMeetup, getMeetupEventId, listAvailability, type MeetupRecord } from "@/lib/meetups/store";
+import { getMeetup, getMeetupEventId, listAvailability, listAvailabilityModes, type MeetupRecord } from "@/lib/meetups/store";
 import { meetupRangeLabel, recommendationLabel } from "@/lib/meetups/view";
 import { loadPeople } from "@/lib/people";
 
@@ -32,6 +32,7 @@ export default async function MeetupPage({ params, searchParams }: Props) {
   // 데이터베이스 문제는 모임 화면에서만 안내하고, 문서 뷰어에는 영향을 주지 않는다.
   let meetup: MeetupRecord | null = null;
   let availability: Record<string, string[]> = {};
+  let modes: Record<string, "available" | "unavailable"> = {};
   let confirmedEvent: EventRecord | null = null;
   let problem: string | null = null;
   const db = getDbOrNull();
@@ -42,6 +43,7 @@ export default async function MeetupPage({ params, searchParams }: Props) {
       meetup = await getMeetup(db, id);
       if (meetup) {
         availability = await listAvailability(db, id);
+        modes = await listAvailabilityModes(db, id);
         if (meetup.status === "confirmed") {
           const eventId = await getMeetupEventId(db, id);
           confirmedEvent = eventId === null ? null : await getEvent(db, eventId);
@@ -76,7 +78,8 @@ export default async function MeetupPage({ params, searchParams }: Props) {
     people: roster,
     availability,
   });
-  const responded = roster.filter((person) => (availability[person.id]?.length ?? 0) > 0).length;
+  // 불가능한 시간 방식으로 모든 칸을 막은 사람도(가능한 칸이 0개여도) 응답한 것이다.
+  const responded = roster.filter((person) => (availability[person.id]?.length ?? 0) > 0 || modes[person.id] !== undefined).length;
   const activeTab = tab === "all" ? "all" : "mine";
   const canEdit = await hasEditSession();
 
@@ -108,6 +111,7 @@ export default async function MeetupPage({ params, searchParams }: Props) {
             slotMinutes={meetup.slotMinutes}
             people={roster}
             availability={availability}
+            modes={modes}
             readOnly={meetup.status === "confirmed"}
           />
         }

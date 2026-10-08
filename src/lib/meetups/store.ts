@@ -1,7 +1,7 @@
 import type { Db } from "@/lib/db/types";
 import type { Person } from "@/lib/people";
 import { cellKey, slotCount } from "./slots";
-import type { Cell, ConfirmInput, MeetupInput } from "./validate";
+import type { AvailabilityMode, Cell, ConfirmInput, MeetupInput } from "./validate";
 
 export type MeetupStatus = "open" | "confirmed";
 
@@ -89,6 +89,11 @@ export async function updateMeetup(db: Db, id: number, input: MeetupInput, optio
                or not (a.day = any($3::date[]))
                or a.slot >= $7::int)
         returning 1
+     ), cleared as (
+       delete from availability_modes m
+        using upd
+        where m.meetup_id = upd.id and $6::boolean
+        returning 1
      )
      select id from upd`,
     [id, input.title, input.dates, input.dayStart, input.dayEnd, options.clearAvailability, slotCount(input.dayStart, input.dayEnd)],
@@ -124,12 +129,22 @@ export async function listAvailability(db: Db, meetupId: number): Promise<Record
   return byPerson;
 }
 
+/** 사람 번호 → 그 사람이 고른 방식(가능한 시간 / 불가능한 시간). 저장한 적 없는 사람은 없다. */
+export async function listAvailabilityModes(db: Db, meetupId: number): Promise<Record<string, AvailabilityMode>> {
+  const rows = await db.query<{ person_id: string; mode: AvailabilityMode }>(
+    `select person_id, mode from availability_modes where meetup_id = $1`,
+    [meetupId],
+  );
+  return Object.fromEntries(rows.map((row) => [row.person_id, row.mode]));
+}
+
 /**
- * 그 사람의 가능한 칸을 통째로 바꾼다. **열린 모임일 때만** 저장하고 true, 없거나 확정된 모임이면 아무것도 바꾸지 않고 false.
+ * 그 사람의 가능한 칸을 통째로 바꾼다. `mode`는 화면에서 어떤 방식으로 골랐는지 기억해 둘 뿐이고, `cells`는 언제나 가능한 칸이다.
+ * **열린 모임일 때만** 저장하고 true, 없거나 확정된 모임이면 아무것도 바꾸지 않고 false.
  * 한 문장(CTE)이라 지우기와 넣기가 함께 일어난다. 새 목록에 없는 칸만 지우고 새 목록은 `on conflict do nothing`으로
  * 넣어서, 같은 행을 한 문장에서 지우고 다시 넣다가 유일 키가 충돌하는 일이 없다.
  */
-export async function saveAvailability(db: Db, meetupId: number, personId: string, cells: Cell[]): Promise<boolean> {
+export async function saveAvailability(db: Db, meetupId: number, personId: string, cells: Cell[], mode: AvailabilityMode = "available"): Promise<boolean> {
   const rows = await db.query<{ id: number }>(
     `with wanted as (
        select w.day, w.slot from unnest($3::date[], $4::smallint[]) as w(day, slot)
@@ -147,9 +162,14 @@ export async function saveAvailability(db: Db, meetupId: number, personId: strin
        insert into availability (meetup_id, person_id, day, slot)
        select $1, $2, w.day, w.slot from wanted w, open_meetup
        on conflict do nothing
+     ),
+     mode_row as (
+       insert into availability_modes (meetup_id, person_id, mode)
+       select $1, $2, $5 from open_meetup
+       on conflict (meetup_id, person_id) do update set mode = excluded.mode
      )
      select id from open_meetup`,
-    [meetupId, personId, cells.map((cell) => cell.day), cells.map((cell) => cell.slot)],
+    [meetupId, personId, cells.map((cell) => cell.day), cells.map((cell) => cell.slot), mode],
   );
   return rows.length > 0;
 }

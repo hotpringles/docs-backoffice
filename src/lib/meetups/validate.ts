@@ -18,7 +18,9 @@ export type MeetupField = "title" | "dates" | "time";
 /** 이미 만들어진 모임의 모양(가능한 시간과 확정을 검사할 때 기준이 된다). */
 export type MeetupShape = { dates: string[]; dayStart: string; dayEnd: string; slotMinutes: number };
 export type Cell = { day: string; slot: number };
-export type AvailabilityInput = { personId: string; cells: Cell[] };
+export type AvailabilityMode = "available" | "unavailable";
+/** `cells`는 `mode`가 available이면 가능한 칸, unavailable이면 **불가능한** 칸이다. */
+export type AvailabilityInput = { personId: string; mode: AvailabilityMode; cells: Cell[] };
 export type ConfirmInput = {
   day: string;
   startSlot: number;
@@ -29,7 +31,7 @@ export type ConfirmInput = {
 };
 
 type Errors<Field extends string> = Partial<Record<Field, string>>;
-export type MeetupFieldErrors = Errors<MeetupField | "personId" | "cells" | "day" | "remindOffsets">;
+export type MeetupFieldErrors = Errors<MeetupField | "personId" | "mode" | "cells" | "day" | "remindOffsets">;
 type Result<T> = { ok: true; value: T } | { ok: false; errors: MeetupFieldErrors };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -85,6 +87,9 @@ export function validateAvailabilityInput(raw: unknown, meetup: MeetupShape, peo
   const personId = typeof raw.personId === "string" ? raw.personId : "";
   if (!people.some((person) => person.id === personId)) errors.personId = "명단에 있는 이름을 골라 주세요.";
 
+  const mode = raw.mode === undefined ? "available" : raw.mode;
+  if (mode !== "available" && mode !== "unavailable") errors.mode = "가능한 시간인지 불가능한 시간인지 올바르지 않아요.";
+
   const perDay = slotCount(meetup.dayStart, meetup.dayEnd, meetup.slotMinutes);
   const maxCells = meetup.dates.length * perDay;
   const cells: Cell[] = [];
@@ -107,7 +112,7 @@ export function validateAvailabilityInput(raw: unknown, meetup: MeetupShape, peo
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
-  return { ok: true, value: { personId, cells } };
+  return { ok: true, value: { personId, mode: mode as AvailabilityMode, cells } };
 }
 
 /** 확정 입력을 검사한다. 날짜는 후보 날짜 중에, 시각은 하루 범위 안의 30분 단위여야 하고 끝이 시작보다 뒤여야 한다. */
